@@ -91,7 +91,7 @@ Die Architektur ist modular aufgebaut (siehe Abbildung 1). Hauptkomponenten:
 7. **Scheduler:** Führt wiederverwendbare Verträge zeitgesteuert oder ereignisgesteuert unter strenger Policy aus.
 8. **Audit‑Log:** Unveränderliche Protokolle aller Aktivitäten, Entscheidungsvorgänge, Verträge, Genehmigungen und Artefakterstellungen.
 
-![Hohe-Level-Architektur-Diagramm]({{file:diagram_placeholder}})
+![Hohe-Level-Architektur-Diagramm](assets/architecture_diagram.png)
 
 
 ## 6 Verträge: einheitliche Autorisierungsobjekte
