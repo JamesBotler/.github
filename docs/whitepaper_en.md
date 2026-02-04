@@ -92,7 +92,7 @@ The architecture is modular (see the diagram below). Key components:
 7. **Scheduler:** Executes reusable contracts on schedules or in response to events under strict policy enforcement.
 8. **Audit Log:** Immutable record of all activities, decision processes, contracts, approvals and artifacts.
 
-![High‑level architecture diagram]({{file:file-QSpuzsE2fQ9mKSSEFPjcUe}})
+![High‑level architecture diagram](assets/architecture_diagram.png)
 
 
 ## 6 Contracts: unified authorisation objects
