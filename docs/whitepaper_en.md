@@ -9,6 +9,7 @@
 5. Overall architecture
 6. Contracts: unified authorization objects
 7. Policy engine: capability model, budgets and data guards
+7.1 Structured Outputs (Schema‑First LLM I/O)
 8. Brokered secrets: zero token exposure
 9. Runner: execution areas, egress control and output sanitizer
 10. Skills and plugin model
@@ -176,6 +177,8 @@ The policy engine writes every decision to the audit log. When evaluating a tool
 4. Checks budgets: are limits for this run not yet exceeded?  
 5. Considers risk class: high‑risk tools require interactive approval.  
 6. Logs the result and returns allow/deny/approval.
+
+Before policy evaluation starts, the engine validates all tool proposals and decision objects against the schema. Only schema‑conforming outputs enter evaluation; invalid responses are discarded or retried.
 
 ### 7.1 Structured Outputs (Schema‑First LLM I/O)
 

@@ -62,14 +62,14 @@ As an alternative, MCP servers can be treated as skills. Each MCP server is regi
 ## Automation and QoL Features
 
 - Scheduling: cron, event-driven triggers, conditional rules and one-shot timers.
-- Job principals: each job runs as its own principal with tight, time-bound budgets.
+- Job Principals: each job runs as its own Principal with tight, time-bound budgets.
 - Misfire and DST handling: schedules are stored in UTC and evaluated in local time zones.
 - Idempotency and outbox: retries check an outbox before sending or mutating data.
 - Safe defaults: high-risk tools are disabled for jobs unless explicitly approved.
 
 ## Multi-Agent Model
 
-The identity model distinguishes users, agents and principals (session or job). Agents have profiles (persona, enabled skills, policy profile, memory scope, allowed channels). Orchestration patterns include single-engine multi-agent hosting and supervisor-worker pipelines with minimal rights for each step. Cross-agent data exchange happens via artifacts and remains untrusted by default.
+The identity model distinguishes users, agents and Principals (session or job). Agents have profiles (persona, enabled skills, policy profile, memory scope, allowed channels). Orchestration patterns include single-engine multi-agent hosting and supervisor-worker pipelines with minimal rights for each step. Cross-agent data exchange happens via artifacts and remains untrusted by default.
 
 ## Large Outputs and Coding Tasks
 
@@ -158,7 +158,7 @@ Default hardening includes localhost-only gateway access, strict allowlists, no 
 - Secrets Broker: stores long-lived secrets and issues short-lived handles.
 - Skill: signed tool package (WASM or MCP server) with a manifest.
 - Artifact: externalized output for large data (patches, reports, logs).
-- Job Principal: principal for scheduled jobs with tight rights and budgets.
+- Job Principal: Principal for scheduled jobs with tight rights and budgets.
 - Control UI: trusted approval and pairing surface.
 - Data Guards: filters for prompt injection, PII and secret leakage.
 - Structured Output: schema-constrained LLM response format used for tool calls and decisions.
@@ -170,7 +170,11 @@ Default hardening includes localhost-only gateway access, strict allowlists, no 
 - Contract diff algorithms and transparency logs for skills.
 - Anomaly detection and multi-tenant hardening.
 
-## Sources
+## Sources & References
+
 
 - OpenClaw permissions, UI exposure and skills ecosystem risks: [JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)
 - CVE-2026-25253 and token leakage via WebSocket Control UI: [The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)
+- Structured output support (OpenAI): [OpenAI Structured Outputs](https://openai.com/index/introducing-structured-outputs-in-the-api/)
+- Structured output support (Gemini): [Gemini structured output](https://ai.google.dev/gemini-api/docs/structured-output)
+- Structured output support (Mistral): [Mistral structured outputs](https://docs.mistral.ai/capabilities/structured-output/structured_output_overview/)
