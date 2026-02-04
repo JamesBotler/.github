@@ -6,9 +6,9 @@ A secure-by-design framework for building personal assistants, companion agents 
 
 ## Quick Links
 
-- German whitepaper: [whitepaper_de.md](../docs/whitepaper_de.md)
-- English whitepaper: [whitepaper_en.md](../docs/whitepaper_en.md)
-- Architecture diagram: [architecture_diagram.png](../docs/assets/architecture_diagram.png)
+- German whitepaper: [whitepaper_de.md](./docs/whitepaper_de.md)
+- English whitepaper: [whitepaper_en.md](./docs/whitepaper_en.md)
+- Architecture diagram: [architecture_diagram.png](./docs/assets/architecture_diagram.png)
 
 ## Problem and Evidence
 
