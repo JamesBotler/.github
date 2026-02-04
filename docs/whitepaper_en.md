@@ -245,6 +245,17 @@ The framework supports cron jobs, event triggers (webhooks, database changes), *
 - **Strict budgets:** Cron jobs have smaller budgets than interactive sessions. No shell execution and no new capabilities without approval.
 - **Idempotency and outbox:** Every side effect uses an idempotency key (`job_run_id + action_hash`). Retries check an outbox before sending/posting/mutating.
 
+**Background workflow (scheduled job, example):**
+
+1. **Scheduler starts job:** Principal `job:<id>` is activated and budgets are set.  
+2. **Tool call 1:** e.g. `gmail.search` → policy checks contract, parameter bounds and budget.  
+3. **Runner executes:** handle from the secrets broker, output sanitizer active.  
+4. **LLM analyzes result:** summarises or plans the next action.  
+5. **Tool call 2:** e.g. `gmail.getMessage` → policy checks again.  
+6. **Tool call 3:** e.g. `slack.post` → allowed only if the contract bounds channel and size.  
+7. **Audit log:** every step is recorded; artifacts are referenced.  
+8. **Deviation:** if any call violates rules, the job pauses and requires re‑approval.
+
 When tools, policies, skill versions or parameters change, the scheduler pauses the job and shows the user a change diff for renewed approval.
 
 

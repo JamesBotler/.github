@@ -244,6 +244,17 @@ Das Framework unterstützt Cron‑Jobs, Event‑Trigger (Webhook, Datenbank‑Ä
 - **Strikt limitierte Budgets:** Cron‑Jobs haben kleinere Budgets als interaktive Sitzungen. Keine Shell‑Ausführung und keine neuen Fähigkeiten ohne Genehmigung.
 - **Idempotenz und Outbox:** Jede Side‑Effect‑Aktion hat einen Idempotenz‑Key (`job_run_id + action_hash`). Retries prüfen eine Outbox, bevor gesendet, gepostet oder mutiert wird.  
 
+**Hintergrund‑Workflow (Scheduled Job, Beispiel):**
+
+1. **Scheduler startet Job:** Principal `job:<id>` wird aktiviert und Budgets werden gesetzt.  
+2. **Tool‑Call 1:** z. B. `gmail.search` → Policy prüft Vertrag, Parametergrenzen, Budget.  
+3. **Runner führt aus:** Handle vom Secrets‑Broker, Output‑Sanitizer aktiv.  
+4. **LLM analysiert Ergebnis:** erstellt Zusammenfassung oder plant nächste Aktion.  
+5. **Tool‑Call 2:** z. B. `gmail.getMessage` → Policy prüft erneut.  
+6. **Tool‑Call 3:** z. B. `slack.post` → nur erlaubt, wenn der Vertrag Kanal und Umfang begrenzt.  
+7. **Audit‑Log:** jeder Schritt wird protokolliert; Artefakte werden referenziert.  
+8. **Abweichung:** verletzt ein Call die Regeln, pausiert der Job und verlangt Re‑Approval.
+
 Bei Änderungen an Tools, Policies, Skill‑Versionen oder Parametern pausiert der Scheduler den Job und zeigt dem Nutzer einen Änderungs‑Diff zur erneuten Freigabe.
 
 
