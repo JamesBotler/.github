@@ -6,9 +6,11 @@ A secure-by-design framework for building personal assistants, companion agents 
 
 ## Quick Links
 
-- German whitepaper: [whitepaper_de.md](./docs/whitepaper_de.md)
-- English whitepaper: [whitepaper_en.md](./docs/whitepaper_en.md)
-- Architecture diagram: [architecture_diagram.png](./docs/assets/architecture_diagram.png)
+- German whitepaper: [whitepaper_de.md](../docs/whitepaper_de.md)
+- English whitepaper: [whitepaper_en.md](../docs/whitepaper_en.md)
+- Architecture diagram: [architecture_diagram.png](../docs/assets/architecture_diagram.png)
+- Compose deployment proposal: [deployment_docker_compose.md](../docs/deployment_docker_compose.md)
+- Pseudocode examples: [pseudo_code/](../pseudo_code/)
 
 ## Problem and Evidence
 
@@ -69,6 +71,18 @@ Unknown-length outputs (patches, reports, datasets) are stored as artifacts with
 
 Reference workflows include a nightly ops digest (email search, summary, Slack post) and a coding task pipeline (plan, patch, tests, review, apply), both enforced through reusable and one-shot contracts.
 
+## Pseudocode Examples
+
+See the `pseudo_code/` directory for technology-neutral flows:
+
+- `01_interactive_email_flow.md`
+- `02_scheduled_digest_job.md`
+- `03_policy_toolcall_pipeline.md`
+
+## Deployment Proposal
+
+See [deployment_docker_compose.md](../docs/deployment_docker_compose.md) for a compose-based deployment proposal with non-root containers and early privilege drop.
+
 ## Memory Scopes
 
 Memory is separated into session, agent, workspace and user scopes. Promotion requires explicit user consent, and all retrieved memory is treated as untrusted input with provenance checks.
@@ -80,8 +94,13 @@ repo/
   docs/
     whitepaper_de.md
     whitepaper_en.md
+    deployment_docker_compose.md
     assets/
       architecture_diagram.png
+  pseudo_code/
+    01_interactive_email_flow.md
+    02_scheduled_digest_job.md
+    03_policy_toolcall_pipeline.md
   apps/
     gateway/
     control-ui/
