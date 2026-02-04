@@ -91,6 +91,7 @@ Die nachstehenden Ziele leiten alle Designentscheidungen:
 4. **Isolierte Ausführung (G4).** Die Agenten‑Engine darf keine Tools direkt ausführen. Werkzeuge werden in **Runnern** (WASM‑Sandboxen oder isolierten Containern) ausgeführt. Native Funktionen sind nur über Companion‑Services möglich, die per mTLS authentifiziert sind.
 5. **Vertrauenswürdige Bestätigungen (G5).** Risikenbehaftete Aktionen (z. B. externe Sendungen, Dateischreibzugriffe) erfordern eine Bestätigung über die Control‑UI (paart mit Endgerät). Genehmigungen über Chat‑Nachrichten werden nicht akzeptiert.
 6. **Auditierbarkeit (G6).** Alle Entscheidungen (Allow, Deny, Approval), alle Tool‑Aufrufe, Artefakterstellungen und ausgehenden Aktionen werden lückenlos in einer unveränderlichen Audit‑Log aufgezeichnet.
+7. **Strukturierte Ausgaben (G7).** Alle LLM‑Antworten, die in Steuerungslogik einfließen, müssen schema‑konform sein (z. B. JSON‑Schema). Nicht‑konforme Antworten werden verworfen oder erneut angefordert.
 
 Zusätzlich definieren wir ein **Standard‑Hardening‑Profil**, das für neue Installationen aktiv ist:
 
@@ -175,6 +176,13 @@ Die Policy‑Engine speichert jede Entscheidung im Audit‑Log. Bei einem Tool�
 5. Risikoklasse: High‑Risk‑Tools erfordern interaktive Genehmigung.  
 6. Ergebnis protokollieren und Entscheidung zurückgeben (Allow / Deny / Approval).  
 
+### 7.1 Strukturierte Ausgaben (Schema‑First LLM I/O)
+
+Die Engine ruft das LLM ausschließlich mit **strukturierten Ausgabeschemata** auf. Tool‑Vorschläge, Vertragsentwürfe, Risiko‑Einschätzungen und Artefakt‑Metadaten müssen ein validierbares Objekt liefern (z. B. JSON‑Schema oder Pydantic‑Modelle). Erst **nach erfolgreicher Validierung** wird die Policy‑Prüfung ausgeführt; fehlerhafte Antworten werden verworfen und mit einem engeren Schema erneut angefordert. Dadurch sinken Parsing‑Fehler, Halluzinations‑Syntax und inkonsistente Parameter.
+
+Strukturierte Ausgaben unterstützen zudem reproduzierbare Audits: Jede Entscheidung basiert auf einem bekannten Datentyp, der in Logs und Artefakten konsistent erfasst wird. In der Praxis lassen sich Schema‑Constraints (Enums, Pattern, Range‑Checks) direkt an Verträge koppeln und vor der Policy validieren.
+
+**LLM‑Unterstützung (Beispiele):** OpenAI Structured Outputs, Gemini Structured Output und Mistral Structured Outputs unterstützen schema‑gebundene Antworten. Siehe: [OpenAI Structured Outputs](https://openai.com/index/introducing-structured-outputs-in-the-api/), [Gemini Structured Output](https://ai.google.dev/gemini-api/docs/structured-output), [Mistral Structured Outputs](https://docs.mistral.ai/capabilities/structured-output/structured_output_overview/).
 
 ## 8 Vermittelte Geheimnisse: Zero‑Token‑Exposure
 
@@ -432,6 +440,7 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 - **Job‑Principal:** Principal eines geplanten Jobs mit restriktiven Rechten.
 - **Control‑UI:** Vertrauenswürdige Oberfläche für Genehmigungen und Pairing.
 - **Datenwächter (Data Guards):** Filter für Prompt‑Injection, PII und Secrets auf Ein‑/Ausgaben.
+- **Strukturierte Ausgabe:** Schema‑gebundene LLM‑Antworten für Tool‑Aufrufe und Entscheidungen.
 
 ## 20 Ausblick und Roadmap
 

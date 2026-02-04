@@ -92,6 +92,7 @@ The following goals underpin all design decisions:
 4. **Isolated execution (G4).** The agent engine cannot execute tools directly. Tools run in **runners** (WASM sandboxes or isolated containers). Native functions are accessible only via companion services.
 5. **Trusted approvals (G5).** Risky actions (e.g., external sends, file writes) require approval through the Control UI (paired device). Approvals via chat messages are not accepted.
 6. **Auditability (G6).** All decisions (allow, deny, approval), all tool calls, artifact creations and outgoing actions are logged immutably.
+7. **Structured outputs (G7).** All LLM responses that drive control flow must conform to a schema (e.g., JSON Schema). Non‑conforming outputs are rejected or retried.
 
 We also define a **default hardening profile** that is enabled for new installations:
 
@@ -176,6 +177,13 @@ The policy engine writes every decision to the audit log. When evaluating a tool
 5. Considers risk class: high‑risk tools require interactive approval.  
 6. Logs the result and returns allow/deny/approval.
 
+### 7.1 Structured Outputs (Schema‑First LLM I/O)
+
+The engine calls the LLM **only with structured output schemas**. Tool proposals, contract drafts, risk assessments and artifact metadata must return a validated object (e.g., JSON Schema or Pydantic models). **Only after successful validation** does the policy check proceed; invalid responses are discarded and retried with tighter constraints. This reduces parsing errors, hallucinated syntax and inconsistent parameters.
+
+Structured outputs also improve auditability: every decision is based on a known data type that is logged and referenced consistently. In practice, schema constraints (enums, patterns, range checks) can be bound directly to contracts and validated before policy evaluation.
+
+**LLM support (examples):** OpenAI Structured Outputs, Gemini Structured Output and Mistral Structured Outputs support schema‑bound responses. See: [OpenAI Structured Outputs](https://openai.com/index/introducing-structured-outputs-in-the-api/), [Gemini Structured Output](https://ai.google.dev/gemini-api/docs/structured-output), [Mistral Structured Outputs](https://docs.mistral.ai/capabilities/structured-output/structured_output_overview/).
 
 ## 8 Brokered secrets: zero token exposure
 
@@ -431,6 +439,7 @@ This structure aids component separation, enables CI tests for each layer and pr
 - **Job Principal:** Principal for scheduled jobs with tight rights and budgets.
 - **Control UI:** Trusted approval and pairing surface.
 - **Data Guards:** Filters for prompt injection, PII and secret leakage.
+- **Structured Output:** Schema‑constrained LLM response format used for tool calls and decisions.
 
 ## 20 Outlook and roadmap
 

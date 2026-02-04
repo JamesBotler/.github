@@ -39,11 +39,19 @@ The framework replaces implicit trust with explicit contracts and strict isolati
 - Isolated execution: tools run in sandboxed runners with strict egress and resource limits.
 - Data guards and output redaction: prompt injection, secrets and PII are filtered before results return to the model.
 - Artifact-first outputs: large results are stored as artifacts and summarized in chat.
+- Structured outputs everywhere: all LLM calls must return schema-valid data before any action is considered.
 - Full auditability: every decision and action is logged immutably.
 
 ## Contracts and Approvals
 
 Contracts are the unit of authorization. They bind tools, parameter constraints, budgets, data handling rules and policy versions. One-shot contracts cover interactive actions, while reusable contracts cover scheduled jobs. Binding modes include exact parameter hashes and bounded ranges for recurring tasks. Policy diffs and version changes pause execution until a user re-approves.
+
+
+## Structured Outputs
+
+All model calls are schema-constrained. The engine requests structured output for tool proposals, contract drafts, policy-relevant decisions, and artifact metadata. Responses are validated against JSON Schema (or equivalent) and rejected or retried on mismatch. This prevents malformed actions, simplifies auditing, and enables strict policy checks before execution.
+
+Several LLM APIs already support schema-constrained output, including OpenAI Structured Outputs, Gemini structured output, and Mistral structured outputs. Links: [OpenAI Structured Outputs](https://openai.com/index/introducing-structured-outputs-in-the-api/), [Gemini structured output](https://ai.google.dev/gemini-api/docs/structured-output), [Mistral structured outputs](https://docs.mistral.ai/capabilities/structured-output/structured_output_overview/).
 
 ## Skills and Integrations
 
@@ -153,6 +161,7 @@ Default hardening includes localhost-only gateway access, strict allowlists, no 
 - Job Principal: principal for scheduled jobs with tight rights and budgets.
 - Control UI: trusted approval and pairing surface.
 - Data Guards: filters for prompt injection, PII and secret leakage.
+- Structured Output: schema-constrained LLM response format used for tool calls and decisions.
 
 ## Roadmap (Summary)
 
