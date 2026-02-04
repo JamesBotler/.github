@@ -11,6 +11,7 @@
 7. Policy‑Engine: Capability Model, Budgets und Data Guards
 7.1 Structured Outputs (Schema‑First LLM I/O)
 8. Vermittelte Geheimnisse: Zero‑Token‑Exposure
+8.1 Secure Secret Provisioning (Control UI Flow)
 9. Runner: Ausführungsbereiche, Egress‑Kontrolle und Output‑Sanitizer
 10. Skills und Plugin‑Modell
 11. Zeitgesteuerte und ereignisgesteuerte Automatisierung
@@ -200,6 +201,16 @@ Das Framework implementiert einen **Secrets‑Broker**, der langfristige Schlüs
 
 Das LLM erhält lediglich die `decision_id` und Metadaten, aber niemals den Handle selbst. Der Broker fungiert als **Token‑Delegationsschicht**: pro Tool‑Call wird ein einmaliger, eng gebundener Delegations‑Handle ausgestellt, der ausschließlich im Runner verwendbar ist.
 
+### 8.1 Secure Secret Provisioning (Control UI Flow)
+
+Wenn ein Nutzer einen Skill aktiviert, der API‑Keys oder Tokens benötigt, nutzt das System einen **dedizierten Control UI‑Flow** zur Secret‑Erfassung. Das Eingabeformular wird vom Gateway bereitgestellt und über den gepaarten, vertrauenswürdigen Kanal ausgeliefert. Secrets werden direkt an den **Secrets‑Broker** übertragen, verschlüsselt gespeichert und gelangen **nie** in den LLM‑Kontext. Die Engine erhält lediglich einen Verweis (z. B. `secret_id`) und kann pro Tool‑Call kurzlebige Handles anfordern.
+
+Damit gilt:
+
+- Secrets werden niemals per Chat übertragen.
+- Das LLM sieht keine Tokens oder API‑Keys.
+- Der Broker kann Scopes, Rotation und Revocation erzwingen, ohne Prompts anzupassen.
+
 Im Gegensatz zu Token‑Weitergabe (wie bei OpenClaw) wird so sichergestellt, dass Angreifer selbst beim Abfangen des Handles nichts anfangen können; sie bräuchten zusätzlich die Identität des Runners, den Entscheidungseintrag und den Parameter‑Hash.
 
 
@@ -225,6 +236,8 @@ Jedes Skill besteht aus einer signierten **WASM‑Modul**‐Datei und einem **Ma
 - Erforderliche Capabilities (`required_capabilities`) und erlaubte Egress‑Ziele (`egress_requirements`).  
 
 Die Skill‑Registry verifiziert beim Import die Signatur. Wird ein Skill installiert, muss der Nutzer ihn in der Control UI pro Agent / Workspace aktivieren. Werkzeuge dürfen nur die im Manifest deklarierten Capabilities nutzen; andere Aufrufe werden von der Policy verweigert.
+
+Benötigt ein Skill API‑Keys oder Tokens, werden Secrets über den in **Abschnitt 8.1** beschriebenen Control UI‑Flow bereitgestellt und gelangen niemals in den LLM‑Kontext.
 
 ### 10.2 Native Companion Services
 

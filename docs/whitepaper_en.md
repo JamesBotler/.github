@@ -11,6 +11,7 @@
 7. Policy engine: capability model, budgets and data guards
 7.1 Structured Outputs (Schema‑First LLM I/O)
 8. Brokered secrets: zero token exposure
+8.1 Secure Secret Provisioning (Control UI Flow)
 9. Runner: execution areas, egress control and output sanitizer
 10. Skills and plugin model
 11. Scheduled and event‑driven automation
@@ -201,6 +202,16 @@ The framework implements a **secrets broker** that manages long‑lived keys and
 
 The LLM receives only the `decision_id` and metadata, never the handle itself. The broker acts as a **token‑delegation layer**: each tool call gets a one‑time, tightly scoped delegation handle that is usable only inside the runner.
 
+### 8.1 Secure Secret Provisioning (Control UI Flow)
+
+When a user enables a skill that requires API keys or tokens, the system uses a **dedicated Control UI flow** to capture secrets. The secret entry form is served by the gateway and delivered over a trusted, paired channel. Secrets are submitted directly to the **secrets broker**, stored encrypted, and never enter the LLM context. The engine only receives a reference to the secret (e.g., `secret_id`) and can request short‑lived handles per tool call.
+
+This flow ensures:
+
+- No secret is transmitted via chat messages.
+- The LLM never sees tokens or API keys.
+- The broker can enforce scopes, rotation and revocation without retraining or prompt changes.
+
 Unlike token passing (as in OpenClaw), this ensures that even if an attacker captured the handle they could not call external services because they would also need the runner identity, the decision record and the parameter hash.
 
 
@@ -226,6 +237,8 @@ Each skill consists of a signed **WASM module** and a **manifest**. The manifest
 - Required capabilities (`required_capabilities`) and allowed network targets (`egress_requirements`).  
 
 The skill registry verifies the signature at import. When a skill is installed, the user must enable it in the Control UI per agent or workspace. Tools may only use the capabilities declared in the manifest; other calls are denied by policy.
+
+If a skill requires API keys or tokens, secrets are provisioned through the Control UI flow described in **Section 8.1**, ensuring they never enter the LLM context.
 
 ### 10.2 Native companion services
 
