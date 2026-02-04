@@ -5,6 +5,7 @@
 1. Einleitung
 2. Problemanalyse und Motivation
 3. Designziele und Anforderungen
+3.1 Safe Use für nicht‑technische Nutzer
 4. Bedrohungsmodell
 5. Gesamtarchitektur
 6. Verträge: einheitliche Autorisierungsobjekte
@@ -84,6 +85,38 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 
 ## 3 Designziele und Anforderungen
+
+
+### 3.1 Safe Use für nicht‑technische Nutzer
+
+Dieses Framework ist so ausgelegt, dass auch nicht‑technische Nutzer sicher arbeiten können. Dazu gehören strikte Defaults, verständliche Genehmigungen und klare Schutzmechanismen.
+
+**Safe Setup Checklist:**
+
+- Gateway auf `localhost` lassen und keine öffentlichen Ports freigeben.
+- Secrets ausschließlich über den Control UI‑Flow erfassen.
+- Contracts nur mit minimalen Capabilities freigeben.
+- Read‑only Skills bevorzugen, bis das System verstanden ist.
+- Scheduled Jobs mit engen Budgets betreiben.
+
+**Häufige Fehler und Schutzmechanismen:**
+
+- Public UI Exposure: standardmäßig blockiert, Warnungen bei Risk‑Konfiguration.
+- Over‑broad Approvals: Contracts zeigen klare Summary und Risk‑Label.
+- Secrets im Chat: Secret‑Pattern werden erkannt und blockiert.
+- Untrusted Skills: Unsigned Skills lösen Warnungen und zusätzliche Bestätigungen aus.
+- Unsafes Automation: High‑Risk Tools sind für Jobs standardmäßig deaktiviert.
+
+**Default Safe Profiles:**
+
+- Personal assistant (safe): Read‑only Tools, keine externen Sends.
+- Ops digest (safe): Bounded Email Search und Single‑Channel Posting.
+- Code review (safe): Artifact‑only Outputs, keine Repo‑Writes.
+
+**Secret Rule:** Niemals Secrets im Chat posten. Verwende den Control UI‑Flow, damit das LLM keine Tokens sieht.
+
+**Safe Mode:** Aktiviert Read‑only Defaults, blockiert External Sends und erzwingt Step‑up Approval für Writes.
+
 
 Die nachstehenden Ziele leiten alle Designentscheidungen:
 

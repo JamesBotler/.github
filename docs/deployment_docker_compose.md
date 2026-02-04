@@ -13,6 +13,7 @@ Deploy each component as its own container under a single `docker-compose.yml`, 
 - **No new privileges**: block privilege escalation.
 - **Minimal capabilities**: drop all capabilities unless explicitly required.
 - **Network segmentation**: separate internal services from external ingress.
+- **Private device access**: use Tailscale (tailnet) so only the user’s devices can reach the Control UI.
 - **Explicit secrets handling**: use Docker secrets or mounted files, not environment variables when possible.
 
 ## Proposed Services (Compose)
@@ -35,6 +36,83 @@ Deploy each component as its own container under a single `docker-compose.yml`, 
 - `tmpfs` mounts for `/tmp`
 - `restart: unless-stopped`
 - `healthcheck` per service
+
+## Tailwind (Tailscale) Access Control
+
+To ensure only the user’s devices can access the agent, run the gateway on a **Tailscale tailnet** and avoid public port exposure. Use Tailscale ACLs to allow access only from specific devices or users. This replaces public ingress with a private overlay network.
+
+Key points:
+
+- No `ports:` exposure for the gateway.
+- Gateway binds to the tailnet interface only.
+- ACLs restrict access to approved devices.
+
+### Gateway-to-Services Connectivity (Internal Network)
+
+Even when ingress is restricted to a tailnet, the gateway must still reach internal services (engine, policy, broker, etc.). The recommended pattern is:
+
+- Keep **all services** on a private internal network.
+- Do **not** publish gateway ports publicly.
+- Use a Tailscale sidecar on the **same internal network** to proxy tailnet traffic to the gateway.
+- Enforce **mTLS** or service-to-service auth between internal components.
+
+This keeps the gateway reachable only via tailnet while preserving secure east‑west connectivity.
+
+### Example: Tailscale Sidecar for Gateway
+
+```yaml
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: contractual-gateway
+    environment:
+      - TS_AUTHKEY=tskey-xxxxx
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=true
+      - TS_SERVE_CONFIG=/config/serve.json
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - ./tailscale/serve.json:/config/serve.json:ro
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    networks:
+      - internal
+
+  gateway:
+    image: contractual/gateway:latest
+    user: "10001:10001"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp
+    networks:
+      - internal
+    depends_on:
+      - tailscale
+
+volumes:
+  tailscale-state:
+  
+networks:
+  internal:
+    internal: true
+```
+
+Example `serve.json` (tailnet → gateway):
+
+```json
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true,
+      "Handler": {
+        "Proxy": "http://gateway:8080"
+      }
+    }
+  }
+}
+```
 
 ## Example Compose Snippet
 
@@ -149,3 +227,5 @@ networks:
 - Port mapping and TLS termination (gateway vs reverse proxy).
 - Storage backend for audit log and artifacts.
 - Secret storage strategy (Docker secrets vs external vault).
+- Tailscale ACL policy design (per-user vs per-device access).
+- Service-to-service mTLS bootstrapping (cert provisioning, rotation).

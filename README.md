@@ -42,6 +42,39 @@ The framework replaces implicit trust with explicit contracts and strict isolati
 - Structured outputs everywhere: all LLM calls must return schema-valid data before any action is considered.
 - Full auditability: every decision and action is logged immutably.
 
+
+## Safe Use for Non-Technical Users
+
+### Safe Setup Checklist
+
+- Keep the gateway on `localhost` and avoid public exposure.
+- Use the Control UI secret flow for API keys and tokens.
+- Approve only minimal contracts and narrow tool bounds.
+- Prefer read-only skills until you are confident.
+- Keep scheduled jobs on tight budgets.
+
+### Common Mistakes and Built-In Protections
+
+- Public UI exposure: blocked by default binding and explicit warnings.
+- Over-broad approvals: contracts display plain-language summaries and risk labels.
+- Secrets in chat: secret-like strings are detected and blocked from messages.
+- Untrusted skills: unsigned or unknown publishers trigger warnings and require extra confirmation.
+- Unsafe automation: high-risk tools are disabled for jobs unless explicitly approved.
+
+### Default Safe Profiles
+
+- Personal assistant (safe): read-only tools, no external sends.
+- Ops digest (safe): bounded email search and single-channel posting.
+- Code review (safe): artifact-only outputs, no repository writes.
+
+### Secret Handling Rule
+
+Never paste secrets into chat. Use the Control UI secret flow so the LLM never sees API keys or tokens.
+
+### Safe Mode
+
+If you are unsure, enable Safe Mode. It enforces read-only tools, blocks external sends, and requires step-up approval for any write action.
+
 ## Contracts and Approvals
 
 Contracts are the unit of authorization. They bind tools, parameter constraints, budgets, data handling rules and policy versions. One-shot contracts cover interactive actions, while reusable contracts cover scheduled jobs. Binding modes include exact parameter hashes and bounded ranges for recurring tasks. Policy diffs and version changes pause execution until a user re-approves.

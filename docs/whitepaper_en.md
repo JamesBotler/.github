@@ -5,6 +5,7 @@
 1. Executive summary
 2. Problem analysis and motivation
 3. Design goals and requirements
+3.1 Safe Use for non‑technical users
 4. Threat model
 5. Overall architecture
 6. Contracts: unified authorization objects
@@ -85,6 +86,38 @@ This white paper summarises our chat discussions and introduces a new framework 
 
 
 ## 3 Design goals and requirements
+
+
+### 3.1 Safe Use for non‑technical users
+
+The framework is designed so non‑technical users can operate safely through strict defaults, clear approvals and guardrails.
+
+**Safe setup checklist:**
+
+- Keep the gateway on `localhost` and avoid public exposure.
+- Capture secrets only through the Control UI flow.
+- Approve contracts with minimal capabilities and narrow bounds.
+- Prefer read‑only skills until you are confident.
+- Run scheduled jobs with tight budgets.
+
+**Common mistakes and protections:**
+
+- Public UI exposure: blocked by default, warnings on risky config.
+- Over‑broad approvals: contracts show plain‑language summaries and risk labels.
+- Secrets in chat: secret‑like strings are detected and blocked.
+- Untrusted skills: unsigned skills trigger warnings and extra confirmation.
+- Unsafe automation: high‑risk tools disabled for jobs unless explicitly approved.
+
+**Default safe profiles:**
+
+- Personal assistant (safe): read‑only tools, no external sends.
+- Ops digest (safe): bounded email search and single‑channel posting.
+- Code review (safe): artifact‑only outputs, no repo writes.
+
+**Secret rule:** Never paste secrets into chat. Use the Control UI secret flow so the LLM never sees tokens.
+
+**Safe mode:** Enforces read‑only defaults, blocks external sends and requires step‑up approval for any write action.
+
 
 The following goals underpin all design decisions:
 
