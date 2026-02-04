@@ -82,7 +82,7 @@ This white paper summarises our chat discussions and introduces a new framework 
 
 **Implication:** Unlimited outputs can lead to high costs (token usage), unreadable chats and data leakage. In existing agent designs, code diffs, logs or documents are often pushed into the conversation without trimming.
 
-**Solution:** Our framework introduces **artifacts** as the primary form of large outputs. Tools that generate large datasets (e.g., code patches, reports, databases) store these as files in an artifact store. The engine returns only a summary, a preview and a reference to the artifact. Contracts set limits on artifact size, number of changed files, allowed file types and retention. For code tasks we recommend workflow steps: plan which files to modify, generate the patch, test it, have a review performed and finally apply it – the latter requiring a new approval. This keeps the conversation concise and ensures controlled processing.
+**Solution:** Our framework introduces **artifacts** as the primary form of large outputs. Tools that generate large datasets (e.g., code patches, reports, databases) store these as files in an artifact store. The engine returns only a summary, a preview and a reference to the artifact. Artifacts are encrypted at rest, access is scoped per principal, and retention/TTL is enforced. Contracts set limits on artifact size, number of changed files, allowed file types and retention. For code tasks we recommend workflow steps: plan which files to modify, generate the patch, test it, have a review performed and finally apply it – the latter requiring a new approval. This keeps the conversation concise and ensures controlled processing.
 
 
 ## 3 Design goals and requirements
@@ -94,7 +94,7 @@ The framework is designed so non‑technical users can operate safely through st
 
 **Safe setup checklist:**
 
-- Keep the gateway on `localhost` and avoid public exposure.
+- Keep the gateway on `localhost` or a private VPN/zero‑trust network (e.g., tailnet); avoid public exposure.
 - Capture secrets only through the Control UI flow.
 - Approve contracts with minimal capabilities and narrow bounds.
 - Prefer read‑only skills until you are confident.
@@ -104,7 +104,7 @@ The framework is designed so non‑technical users can operate safely through st
 
 - Public UI exposure: blocked by default, warnings on risky config.
 - Over‑broad approvals: contracts show plain‑language summaries and risk labels.
-- Secrets in chat: secret‑like strings are detected and blocked.
+- Secrets in chat: best‑effort DLP/regex detection blocks and warns on secret‑like strings.
 - Untrusted skills: unsigned skills trigger warnings and extra confirmation.
 - Unsafe automation: high‑risk tools disabled for jobs unless explicitly approved.
 
@@ -237,7 +237,7 @@ The LLM receives only the `decision_id` and metadata, never the handle itself. T
 
 ### 8.1 Secure Secret Provisioning (Control UI Flow)
 
-When a user enables a skill that requires API keys or tokens, the system uses a **dedicated Control UI flow** to capture secrets. The secret entry form is served by the gateway and delivered over a trusted, paired channel. Secrets are submitted directly to the **secrets broker**, stored encrypted, and never enter the LLM context. The engine only receives a reference to the secret (e.g., `secret_id`) and can request short‑lived handles per tool call.
+When a user enables a skill that requires API keys or tokens, the system uses a **dedicated Control UI flow** to capture secrets. The secret entry form is served by the gateway and delivered over a trusted, paired channel. Secrets are submitted directly to the **secrets broker** over mTLS with origin/CSRF binding, stored encrypted, and never enter the LLM context. The engine only receives a reference to the secret (e.g., `secret_id`) and can request short‑lived handles per tool call.
 
 This flow ensures:
 

@@ -81,7 +81,7 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 **Implikation:** Unbegrenzte Ausgaben können zu hohen Kosten (Tokenverbrauch), unlesbaren Chats und Datenlecks führen. In bestehendem Agenten‑Design werden Code‑Diffs, Logs oder Dokumente oft ungekürzt in den Gesprächsfluss gepusht.  
 
-**Lösungsansatz:** Unser Framework führt **Artifacts** als primäre Form grosser Ausgaben ein. Werkzeuge, die große Datenmengen erzeugen (z. B. Code‑Patches, Reports, Datenbanken), speichern diese als Datei in einem Artifact‑Store. Die Engine liefert nur eine Zusammenfassung, eine Vorschau (Auszug) und einen Verweis auf das Artifact zurück. Verträge legen Grenzwerte für Artifact‑Größe, Anzahl geänderter Dateien, erlaubte Dateitypen und Speicherdauer fest. Für Code‑Aufgaben empfehlen wir Workflow‑Schritte: erst planen (Welche Dateien werden verändert?), dann Patch generieren, testen, überprüfen lassen und schlussendlich anwenden – letzteres unter neuer Genehmigung. So bleibt die Konversation schlank und die Verarbeitung kontrollierbar.
+**Lösungsansatz:** Unser Framework führt **Artifacts** als primäre Form grosser Ausgaben ein. Werkzeuge, die große Datenmengen erzeugen (z. B. Code‑Patches, Reports, Datenbanken), speichern diese als Datei in einem Artifact‑Store. Die Engine liefert nur eine Zusammenfassung, eine Vorschau (Auszug) und einen Verweis auf das Artifact zurück. Artifacts sind at rest verschlüsselt, Zugriff ist pro Principal gescoped und Retention/TTL wird erzwungen. Verträge legen Grenzwerte für Artifact‑Größe, Anzahl geänderter Dateien, erlaubte Dateitypen und Speicherdauer fest. Für Code‑Aufgaben empfehlen wir Workflow‑Schritte: erst planen (Welche Dateien werden verändert?), dann Patch generieren, testen, überprüfen lassen und schlussendlich anwenden – letzteres unter neuer Genehmigung. So bleibt die Konversation schlank und die Verarbeitung kontrollierbar.
 
 
 ## 3 Designziele und Anforderungen
@@ -93,7 +93,7 @@ Dieses Framework ist so ausgelegt, dass auch nicht‑technische Nutzer sicher ar
 
 **Safe Setup Checklist:**
 
-- Gateway auf `localhost` lassen und keine öffentlichen Ports freigeben.
+- Gateway auf `localhost` lassen oder über ein privates VPN/Zero‑Trust‑Netz (z. B. Tailnet) zugänglich machen; keine öffentlichen Ports freigeben.
 - Secrets ausschließlich über den Control UI‑Flow erfassen.
 - Contracts nur mit minimalen Capabilities freigeben.
 - Read‑only Skills bevorzugen, bis das System verstanden ist.
@@ -103,7 +103,7 @@ Dieses Framework ist so ausgelegt, dass auch nicht‑technische Nutzer sicher ar
 
 - Public UI Exposure: standardmäßig blockiert, Warnungen bei Risk‑Konfiguration.
 - Over‑broad Approvals: Contracts zeigen klare Summary und Risk‑Label.
-- Secrets im Chat: Secret‑Pattern werden erkannt und blockiert.
+- Secrets im Chat: Best‑Effort DLP/Regex‑Erkennung blockiert und warnt bei Secret‑Pattern.
 - Untrusted Skills: Unsigned Skills lösen Warnungen und zusätzliche Bestätigungen aus.
 - Unsafes Automation: High‑Risk Tools sind für Jobs standardmäßig deaktiviert.
 
@@ -236,7 +236,7 @@ Das LLM erhält lediglich die `decision_id` und Metadaten, aber niemals den Hand
 
 ### 8.1 Secure Secret Provisioning (Control UI Flow)
 
-Wenn ein Nutzer einen Skill aktiviert, der API‑Keys oder Tokens benötigt, nutzt das System einen **dedizierten Control UI‑Flow** zur Secret‑Erfassung. Das Eingabeformular wird vom Gateway bereitgestellt und über den gepaarten, vertrauenswürdigen Kanal ausgeliefert. Secrets werden direkt an den **Secrets‑Broker** übertragen, verschlüsselt gespeichert und gelangen **nie** in den LLM‑Kontext. Die Engine erhält lediglich einen Verweis (z. B. `secret_id`) und kann pro Tool‑Call kurzlebige Handles anfordern.
+Wenn ein Nutzer einen Skill aktiviert, der API‑Keys oder Tokens benötigt, nutzt das System einen **dedizierten Control UI‑Flow** zur Secret‑Erfassung. Das Eingabeformular wird vom Gateway bereitgestellt und über den gepaarten, vertrauenswürdigen Kanal ausgeliefert. Secrets werden direkt an den **Secrets‑Broker** über mTLS mit Origin/CSRF‑Binding übertragen, verschlüsselt gespeichert und gelangen **nie** in den LLM‑Kontext. Die Engine erhält lediglich einen Verweis (z. B. `secret_id`) und kann pro Tool‑Call kurzlebige Handles anfordern.
 
 Damit gilt:
 
