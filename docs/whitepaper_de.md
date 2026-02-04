@@ -371,6 +371,8 @@ Die folgenden Dateien enthalten technologie‑neutrale Abläufe und dienen als I
 
 ## 18 Deployment und Monorepo‑Struktur
 
+Siehe auch die Compose‑Deployment‑Notiz: [deployment_docker_compose.md](deployment_docker_compose.md).
+
 Für die Zusammenarbeit im GitHub‑Repository wird eine klare Struktur empfohlen:
 
 ```

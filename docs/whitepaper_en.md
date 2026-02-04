@@ -370,6 +370,8 @@ The following files provide technology‑neutral reference flows:
 
 ## 18 Deployment and monorepo structure
 
+See the Compose deployment note: [deployment_docker_compose.md](deployment_docker_compose.md).
+
 For collaboration on GitHub, a clear structure is recommended:
 
 ```
