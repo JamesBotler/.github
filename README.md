@@ -1,97 +1,148 @@
-Contractual Agents Framework
+# Contractual Agents Framework
 
-This project contains a reference implementation of a contractual agent framework — a secure-by-design system for running language‑model assistants that can act through tools without exposing credentials or taking uncontrolled actions. The framework grew out of a detailed analysis of existing agentic assistants such as OpenClaw, which require broad file‑system, network and shell permissions, often run with misconfigured web interfaces and have been vulnerable to token‑leak attacks (e.g., CVE‑2026‑25253). These weaknesses inspired a new architecture that uses contracts, policy enforcement, isolation and signed WebAssembly (WASM) plugins to deliver similar functionality with dramatically reduced attack surface.
+## Overview
 
-What problem does this solve?
+A secure-by-design framework for building personal assistants, companion agents and business automation bots that can act through tools without exposing credentials or taking uncontrolled actions. This README is a condensed, self-contained summary of the full design; the detailed specifications live in the whitepapers.
 
-Modern agents are powerful because they can read emails, files and calendars, run shell commands, access cloud APIs and send messages. In practice, they are often over‑permissive: tokens are stored in configuration files or sent to the browser, skills downloaded from the community can be malicious, and scheduled jobs run unsupervised with the same rights as interactive sessions. A single prompt‑injection can trick the model into deleting files or emailing sensitive data. Furthermore, large outputs (e.g. code patches) can blow up context windows or leak secrets.
+## Quick Links
 
-The contractual agents framework addresses these issues by introducing:
+- German whitepaper: [whitepaper_de.md](../docs/whitepaper_de.md)
+- English whitepaper: [whitepaper_en.md](../docs/whitepaper_en.md)
+- Architecture diagram: [architecture_diagram.png](../docs/assets/architecture_diagram.png)
 
-Fine‑grained capabilities: All tools are expressed as explicit capabilities (e.g. read‑only email search, post to a specific Slack channel). Nothing is allowed by default.
+## Problem and Evidence
 
-Contracts: A tool invocation must belong to a contract — either one‑shot (single use) or reusable (scheduled jobs). Contracts define parameter constraints, budgets and data‑handling rules. They are presented to the user in the Control UI for approval.
+OpenClaw-style assistants demonstrate strong UX but expose systemic risk. Typical deployments run a local gateway with a Control UI, store credentials locally, and load skills inside the gateway process. That coupling makes a single compromise catastrophic. Analyses report overly broad permissions (filesystem, shell, long-lived API tokens, network access), misconfigured or publicly exposed web UIs and unvetted skills ecosystems that can carry malware or exfiltrate data ([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)). A high-severity 2026 issue (CVE-2026-25253) showed how a crafted link could leak a gateway token via WebSocket and allow remote command execution, highlighting how UI misconfiguration can bypass sandboxing and approvals ([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Recurring failure classes include prompt injection, over-broad integrations with long-lived tokens, supply-chain risk in skills and insecure UI defaults.
 
-Zero token exposure: Secrets remain exclusively in a secrets broker. When a tool needs to call an external API, the runner requests an opaque, short‑lived handle bound to a specific contract. The language model never sees API keys or bearer tokens.
+## Architecture
 
-Isolated execution: Tools run in runners that enforce network allowlists, resource limits and filesystem sandboxes. WASM skills are signed modules executed in a sandbox; native functions must be implemented via a companion service behind policy checks.
+The framework replaces implicit trust with explicit contracts and strict isolation. Core components:
 
-Safe automation: Scheduled jobs execute under their own principal with a reusable contract. Any change to the contract, policy or skill versions pauses the job for re‑approval. Budgets and idempotency guarantees prevent runaway actions.
+- Gateway: user interaction, message ingress, pairing and Control UI. It never executes tools.
+- Engine: runs the agent loop and proposes tool calls. It never touches secrets or tools.
+- Policy Engine: gates every tool call and enforces contracts, budgets, risk tiers and data guards.
+- Runner Pool: executes tools in isolated sandboxes (WASM or containers) with strict egress allowlists.
+- Secrets Broker: holds long-lived credentials and issues per-call delegation handles.
+- Skill Registry: manages signed skills and per-agent enablement.
+- Scheduler: runs reusable contracts for cron, event-driven, conditional and one-shot jobs.
+- Audit Log: append-only record of approvals, decisions, tool calls and artifacts.
 
-Artifact‑first outputs: Large results such as code patches or reports are stored as artifacts with size and type limits. Chat responses contain only summaries and references.
+## Security Invariants and Decisions
 
-Architecture overview
+- Zero token exposure: the LLM never sees API keys or bearer tokens.
+- Deny by default: every capability must be explicitly approved.
+- Fine-grained capabilities: permissions are defined per tool and parameter scope.
+- Contract-based execution: all tool calls must match an approved contract (one-shot or reusable).
+- Step-up approvals: high-risk actions require out-of-band confirmation in the Control UI.
+- Isolated execution: tools run in sandboxed runners with strict egress and resource limits.
+- Data guards and output redaction: prompt injection, secrets and PII are filtered before results return to the model.
+- Artifact-first outputs: large results are stored as artifacts and summarized in chat.
+- Full auditability: every decision and action is logged immutably.
 
-The framework is composed of several cooperating services:
+## Contracts and Approvals
 
-Component	Responsibility
-Gateway	Receives messages from messengers, displays the Control UI, manages sessions and pairing. It has no execution rights.
-Engine	Runs the language model, generates plans and proposes tool calls. It never accesses secrets or executes tools.
-Policy	Evaluates tool proposals against contracts and capability rules. It enforces budgets, data‑handling policies and approval requirements.
-Runner	Executes tools in isolation (WASM sandboxes or containers) and sanitises outputs. It obtains broker handles for API calls.
-Secrets Broker	Stores long‑lived credentials and issues short‑lived handles for specific tool calls. Secrets never enter the model context.
-Skill Registry	Manages signed WASM skills, their manifests and enablement per agent.
-Scheduler	Executes reusable contracts on schedules or in response to events, under strict policy enforcement.
-Audit Log	Records all contracts, approvals, decisions, tool executions and artifacts in an append‑only store.
+Contracts are the unit of authorization. They bind tools, parameter constraints, budgets, data handling rules and policy versions. One-shot contracts cover interactive actions, while reusable contracts cover scheduled jobs. Binding modes include exact parameter hashes and bounded ranges for recurring tasks. Policy diffs and version changes pause execution until a user re-approves.
 
-Key design decisions
+## Skills and Integrations
 
-Minimum privilege: Agents and jobs must request only the specific capabilities they need. By default, everything is denied until explicitly approved.
+The default plugin model uses signed WASM skills with manifests that declare tool schemas, required capabilities and allowed network targets. Native access is handled by companion services behind mTLS and policy checks.
 
-Contract‑based authorisation: Tools cannot be invoked ad hoc; instead, every call is bound to a contract. The Control UI presents the contract for the user to approve, showing allowed parameters, outputs and budgets. Scheduled tasks (cron jobs, event triggers) use reusable contracts; one‑off actions use one‑shot contracts.
+As an alternative, MCP servers can be treated as skills. Each MCP server is registered with a manifest, strict authentication and a capability mapping. The policy engine still gates every tool call. Local MCP servers run in sandboxes; remote MCP servers are allowlisted and receive per-call delegated handles from the secrets broker. Tokens never reach the LLM.
 
-Trusted approvals: High‑risk actions (sending external messages, writing files) require confirmation via the Control UI on a paired device, never via the untrusted chat channel. Tokens are never stored in the browser, avoiding the CVE‑2026‑25253 class of bugs.
+## Automation and QoL Features
 
-Isolated skills: Third‑party functionality is packaged as signed WebAssembly modules. Each skill declares its required capabilities and network allowlists; unknown network access is blocked. If native access is required, a companion service with strict interfaces is used instead of giving the plugin arbitrary host access.
+- Scheduling: cron, event-driven triggers, conditional rules and one-shot timers.
+- Job principals: each job runs as its own principal with tight, time-bound budgets.
+- Misfire and DST handling: schedules are stored in UTC and evaluated in local time zones.
+- Idempotency and outbox: retries check an outbox before sending or mutating data.
+- Safe defaults: high-risk tools are disabled for jobs unless explicitly approved.
 
-Explicit automation: Jobs run with their own principals and strict budgets (time, calls, cost, data volume). Deviations or upgrades to policies or skills halt the job until the user re‑approves.
+## Multi-Agent Model
 
-Artefact handling: Large outputs are written to artefacts; chat messages only include summaries. This prevents oversized prompts and accidental exposure of secrets.
+The identity model distinguishes users, agents and principals (session or job). Agents have profiles (persona, enabled skills, policy profile, memory scope, allowed channels). Orchestration patterns include single-engine multi-agent hosting and supervisor-worker pipelines with minimal rights for each step. Cross-agent data exchange happens via artifacts and remains untrusted by default.
 
-Repository structure
+## Large Outputs and Coding Tasks
 
-The GitHub repository is organised to encourage modularity and contributions:
+Unknown-length outputs (patches, reports, datasets) are stored as artifacts with size and type limits. The recommended code workflow is plan, generate patch, validate, review, then apply via a separate one-shot approval. This avoids oversized prompts and limits the blast radius of mistakes.
 
-docs/whitepaper/WHITEPAPER.md    # In-depth documentation of the design (this project’s whitepaper)
-README.md                       # This file
-apps/
-  gateway/                      # Channel adapters and Control UI
-  engine/                       # Agent loop implementation
-  policy/                       # Capability rules and contract enforcement
-  runner/                       # Tool execution environment
-  broker/                       # Secrets broker service
-  scheduler/                    # Scheduled and event-driven job executor
-packages/
-  core/                         # Shared types, schemas and utilities
-  contracts/                    # Contract definition, hashing and diffing
-  wasm-runtime/                 # WASM runtime and sandbox
-  skill-sdk/                    # Helpers for authoring skills and manifests
-  artifacts/                    # Artifact storage and scanning
-  audit/                        # Append-only audit log
-  memory/                       # Memory scopes and promotion logic
-  testing/                      # Test harnesses and security suites
-skills/                         # Example skills implemented as WASM modules
-companions/                     # Example native companion services
-examples/                       # Reference workflows (ops digest, codegen patch)
+## Reference Workflows
 
-Getting started
+Reference workflows include a nightly ops digest (email search, summary, Slack post) and a coding task pipeline (plan, patch, tests, review, apply), both enforced through reusable and one-shot contracts.
 
-Install dependencies: The repository uses modern TypeScript tooling (pnpm, turborepo) and a Rust or Go backend for the broker and runner. See the individual apps/ READMEs for language‑specific instructions.
+## Memory Scopes
 
-Run locally: Start the gateway (pnpm run dev), policy, runner and broker services. The gateway serves the Control UI at http://localhost:3000. Pair a device and enable built‑in skills.
+Memory is separated into session, agent, workspace and user scopes. Promotion requires explicit user consent, and all retrieved memory is treated as untrusted input with provenance checks.
 
-Explore examples: Try the example workflows in examples/, such as the nightly ops digest or code generation patch pipeline. Approve the contracts in the UI and observe how the system enforces boundaries.
+## Repository Layout (Proposed)
 
-Develop skills: Use the packages/skill-sdk to create new WASM skills. Write a manifest declaring your tool schemas and required capabilities. Package and sign the module. Test it against the policy engine before publishing.
+```text
+repo/
+  docs/
+    whitepaper_de.md
+    whitepaper_en.md
+    assets/
+      architecture_diagram.png
+  apps/
+    gateway/
+    control-ui/
+    engine/
+    policy/
+    runner/
+    worker/
+    broker/
+    scheduler/
+  packages/
+    core/
+    agent-runtime/
+    contracts/
+    policy/
+    scheduler-lib/
+    queue/
+    wasm-runtime/
+    tools-sdk/
+    skill-sdk/
+    artifacts/
+    audit/
+    memory/
+    testing/
+  skills/
+  companions/
+  examples/
+```
 
-Contribute: Contributions are welcome! Please read CONTRIBUTING.md (coming soon) for coding standards, branch policies and how to propose improvements to the policy DSL or broker protocol.
+## Testing and Hardening
 
-Further reading
+- Policy regression tests (allow/deny matrices).
+- Contract diff tests and approval replay tests.
+- Prompt-injection corpora and red-team scenarios.
+- Sandbox escape tests and egress policy verification.
+- End-to-end workflows with artifacts and MCP or WASM skills.
 
-The full design rationale, threat analysis, formal models and future roadmap are detailed in the project’s whitepapers. We provide two fully‑authored versions:
+Default hardening includes localhost-only gateway access, strict allowlists, no tokens in the browser and enforced output redaction.
 
-German (de): see whitepaper_v3.md (docs/whitepaper/ or download the compiled file) for an in‑depth discussion in the original language. It covers all design decisions, motivations and solutions.
+## Glossary
 
-English (en): see whitepaper_v3_en.md for the translated, peer‑reviewed version of the same content. Both versions cite real‑world vulnerabilities such as the CVE‑2026‑25253 token leakage and the risks posed by unvetted skills.
+- Agent: configured assistant with persona, skills and a policy profile.
+- Principal: security identity for a session or job to which tool calls are bound.
+- Contract: authorization object defining tools, parameters, budgets and data rules.
+- Capability: fine-grained permission for a tool class with parameter bounds.
+- Policy Engine: evaluates tool calls against contracts, budgets and risk tiers.
+- Runner: isolated execution environment for tools (WASM or containers).
+- Secrets Broker: stores long-lived secrets and issues short-lived handles.
+- Skill: signed tool package (WASM or MCP server) with a manifest.
+- Artifact: externalized output for large data (patches, reports, logs).
+- Job Principal: principal for scheduled jobs with tight rights and budgets.
+- Control UI: trusted approval and pairing surface.
+- Data Guards: filters for prompt injection, PII and secret leakage.
 
-Reading the whitepapers is highly recommended for anyone extending or integrating the framework. They explain the design decisions in detail and provide context for the problems we aim to solve.
+## Roadmap (Summary)
+
+- Policy DSL for human-readable rules.
+- Native companion protocol standardization.
+- Contract diff algorithms and transparency logs for skills.
+- Anomaly detection and multi-tenant hardening.
+
+## Sources
+
+- OpenClaw permissions, UI exposure and skills ecosystem risks: [JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)
+- CVE-2026-25253 and token leakage via WebSocket Control UI: [The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)

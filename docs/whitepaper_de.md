@@ -1,12 +1,39 @@
 # Vertragliche Agenten: Ein sicheres Framework für Agenten mit vertragsbasiertem Tool‑Zugriff, vermittelten Geheimnissen, WASM‑Skills und Multi‑Agent‑Orchestrierung
 
+## Inhaltsübersicht
+
+1. Einleitung
+2. Problemanalyse und Motivation
+3. Designziele und Anforderungen
+4. Bedrohungsmodell
+5. Gesamtarchitektur
+6. Verträge: einheitliche Autorisierungsobjekte
+7. Policy‑Engine: Fähigkeitenmodell, Budgets und Datenwächter
+8. Vermittelte Geheimnisse: Zero‑Token‑Exposure
+9. Runner: Ausführungsbereiche, Egress‑Kontrolle und Output‑Sanitizer
+10. Skills und Plugin‑Modell
+11. Zeitgesteuerte und ereignisgesteuerte Automatisierung
+12. Multi‑Agent‑Unterstützung und Orchestrierung
+13. Artefakt‑basierte Ausgaben
+14. Speicherbereiche und Promotion
+15. Audit, Observability und Forensik
+16. Referenz‑Workflows
+17. Deployment und Monorepo‑Struktur
+18. Glossar
+19. Ausblick und Roadmap
+20. Schlussbemerkung
+
 ## 1 Einleitung
 
-Künstliche Intelligenzen, die als persönliche Assistenten oder Geschäftsagenten Aufgaben autonom ausführen, gewinnen rasant an Popularität. Projekte wie **OpenClaw** (früher *ClawdBot* oder *MoltBot*) zeigen, wie leistungsfähig solche Agenten sein können. Sie verbinden sich gleichzeitig mit Messengern, E‑Mail‑Systemen, Cloud‑Diensten, Git‑Repositorys und Betriebssystemwerkzeugen. Dieser Komfort geht jedoch mit gravierenden Sicherheitsrisiken einher. Untersuchungen zeigen, dass OpenClaw umfangreiche Berechtigungen benötigt – Dateisystemzugriff, Bash‑Ausführungsrechte, API‑Schlüssel und Netzwerkzugriffe – wodurch die Komplexität und damit die Angriffsfläche steigt【962194542635939†L341-L344】. Nutzer installieren den Assistenten häufig mit weitreichendem Zugang zu E‑Mails, Dateien, Kalendern und API‑Schlüsseln ohne geeignete Isolation【962194542635939†L374-L376】. In vielen Fällen wird die lokale Web‑Schnittstelle öffentlich erreichbar gemacht oder ohne Authentifizierung betrieben, so dass Angreifer den Agenten über das Netzwerk steuern können【962194542635939†L430-L444】.  
+Künstliche Intelligenzen, die als persönliche Assistenten, Companion‑Agenten oder Geschäftsagenten Aufgaben autonom ausführen, gewinnen rasant an Popularität. Projekte wie **OpenClaw** (früher *ClawdBot* oder *MoltBot*) zeigen, wie leistungsfähig solche Agenten sein können. Sie verbinden sich gleichzeitig mit Messengern, E‑Mail‑Systemen, Cloud‑Diensten, Git‑Repositorys und Betriebssystemwerkzeugen. Dieser Komfort geht jedoch mit gravierenden Sicherheitsrisiken einher. Untersuchungen zeigen, dass OpenClaw umfangreiche Berechtigungen benötigt – Dateisystemzugriff, Bash‑Ausführungsrechte, API‑Schlüssel und Netzwerkzugriffe – wodurch die Komplexität und damit die Angriffsfläche steigt([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)). Nutzer installieren den Assistenten häufig mit weitreichendem Zugang zu E‑Mails, Dateien, Kalendern und API‑Schlüsseln ohne geeignete Isolation([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)). In vielen Fällen wird die lokale Web‑Schnittstelle öffentlich erreichbar gemacht oder ohne Authentifizierung betrieben, so dass Angreifer den Agenten über das Netzwerk steuern können([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)).  
 
-Im Februar 2026 wurde zudem eine schwerwiegende Schwachstelle (CVE‑2026‑25253) gemeldet, die einen *one‑click RCE‑Angriff* ermöglichte. Dabei vertraute die Control‑UI der Abfrageparameter zu stark und übermittelte beim Verbindungsaufbau automatisch ein Gateway‑Token an eine beliebige Web‑Site; ein Klick auf einen präparierten Link reichte aus, um das Token an einen Angreifer zu senden. Der Angreifer konnte damit die Konfiguration ändern und beliebige Befehle auf dem Host ausführen【375448051732527†L60-L79】. Die Ursache lag in fehlender Validierung des `WebSocket`‑Origins; so konnte eine bösartige Seite das Token abfangen, sich gegenüber dem Gateway authentifizieren und die Sandbox umgehen【375448051732527†L98-L112】. Dieser Vorfall zeigt, dass existierende Sicherheitsfunktionen wie Sandboxen und Genehmigungsmechanismen die Gefahr nicht ausreichend eingrenzen【375448051732527†L120-L125】.  
+OpenClaw betreibt typischerweise einen lokalen Gateway‑Prozess mit Control‑UI, lädt Skills im selben Prozess und speichert Credentials lokal. Damit teilen UI, Skill‑Code und Geheimnisse denselben Vertrauensbereich, was bei Kompromittierung zu vollständigem Zugriff führen kann.
 
-Ein weiteres Problem ist das noch unzureichend geprüfte Ökosystem von „Skills“. Community‑Plugins können unbemerkt schädlichen Code oder Malware enthalten und weitreichende Berechtigungen anfordern【962194542635939†L454-L459】. Sicherheitsforscher fanden Dutzende bösartige Skills auf dem inoffiziellen Marktplatz ClawdbHub【962194542635939†L465-L470】.  
+Aus der Analyse ergeben sich wiederkehrende Fehlerklassen: Prompt‑Injection zur Befehlsausführung, überbreite Integrationen mit langlebigen Tokens, Supply‑Chain‑Risiken im Skill‑Ökosystem und Fehlkonfigurationen der Web‑UI.
+
+Im Februar 2026 wurde zudem eine schwerwiegende Schwachstelle (CVE‑2026‑25253) gemeldet, die einen *one‑click RCE‑Angriff* ermöglichte. Dabei vertraute die Control‑UI der Abfrageparameter zu stark und übermittelte beim Verbindungsaufbau automatisch ein Gateway‑Token an eine beliebige Web‑Site; ein Klick auf einen präparierten Link reichte aus, um das Token an einen Angreifer zu senden. Der Angreifer konnte damit die Konfiguration ändern und beliebige Befehle auf dem Host ausführen([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Die Ursache lag in fehlender Validierung des `WebSocket`‑Origins; so konnte eine bösartige Seite das Token abfangen, sich gegenüber dem Gateway authentifizieren und die Sandbox umgehen([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Dieser Vorfall zeigt, dass existierende Sicherheitsfunktionen wie Sandboxen und Genehmigungsmechanismen die Gefahr nicht ausreichend eingrenzen([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)).  
+
+Ein weiteres Problem ist das noch unzureichend geprüfte Ökosystem von „Skills“. Community‑Plugins können unbemerkt schädlichen Code oder Malware enthalten und weitreichende Berechtigungen anfordern([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)). Sicherheitsforscher fanden Dutzende bösartige Skills auf dem inoffiziellen Marktplatz ClawdbHub([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)).  
 
 Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreibt ein neues Framework, das diese Probleme adressiert. Es stellt **vertragliche Agenten** vor – eine Architektur, die Privilegien strikt trennt, jede Werkzeugnutzung über explizite Verträge genehmigt und Geheimnisse niemals direkt an das Sprachmodell weitergibt. Jede Designentscheidung wird durch das zugrunde liegende Problem motiviert, deren Auswirkungen erläutert und ein Lösungsansatz präsentiert.
 
@@ -14,7 +41,7 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 ### 2.1 Übermäßige Berechtigungen und fehlende Isolation
 
-**Problem:** OpenClaw fungiert als lokaler Gateway‑Prozess mit Web‑UI. Zur Nutzung verbindet der Agent Dateien, E‑Mails, Kalender, Chat‑Kanäle und Cloud‑APIs. Um diese Funktionen „einfach zum Laufen zu bringen“, vergeben Nutzer dem Agenten Lese‑/Schreibrechte auf das Dateisystem, Shell‑Zugriff, langfristige API‑Tokens und Netzberechtigungen【962194542635939†L341-L344】. In vielen Installationen läuft die Web‑Schnittstelle auf allen Interfaces und ohne Authentifizierung【962194542635939†L430-L444】.
+**Problem:** OpenClaw fungiert als lokaler Gateway‑Prozess mit Web‑UI. Zur Nutzung verbindet der Agent Dateien, E‑Mails, Kalender, Chat‑Kanäle und Cloud‑APIs. Um diese Funktionen „einfach zum Laufen zu bringen“, vergeben Nutzer dem Agenten Lese‑/Schreibrechte auf das Dateisystem, Shell‑Zugriff, langfristige API‑Tokens und Netzberechtigungen([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)). In vielen Installationen läuft die Web‑Schnittstelle auf allen Interfaces und ohne Authentifizierung([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)). Credentials werden lokal gespeichert, und Skills laufen im Gateway‑Prozess – Tools, UI und Geheimnisse teilen damit denselben Prozessraum.
 
 **Implikation:** Der Agent wird zu einem „Superuser“, der ohne weitere Einschränkungen E‑Mails lesen, Dateien löschen, Code ausführen oder Cloud‑Konten verändern kann. Eine einzige Fehlkonfiguration oder Kompromittierung (z. B. durch RCE) verschafft Angreifern Zugriff auf alle Systeme des Nutzers. Da Agenten lernbasierte Modelle nutzen, sind sie zudem anfällig für *Prompt‑Injection*. Die Ausführung von Shell‑Befehlen und Dateizugriff in derselben Sandbox erhöht die Wahrscheinlichkeit, dass bösartige Eingaben zu unerwarteten Aktionen führen.
 
@@ -22,15 +49,15 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 ### 2.2 Token‑Leckage und Fehlkonfiguration der Control‑UI
 
-**Problem:** Die erwähnte Schwachstelle (CVE‑2026‑25253) demonstriert, dass Tokens an das Web geleakt werden können. Die Control‑UI leitete das `gatewayUrl` aus der URL ohne Validierung an den WebSocket‑Verbindungsaufbau weiter; dadurch konnte ein Angreifer das Gateway‑Token abfangen【375448051732527†L60-L79】. Weitere Untersuchungen zeigten, dass durch Cross‑Site‑WebSocket‑Hijacking selbst Gateways, die nur auf `localhost` hörten, kompromittiert werden konnten【375448051732527†L98-L112】. Zusätzlich konnten Angreifer Konfigurationsparameter wie `exec.approvals.set` oder `tools.exec.host` ändern und so die Sandbox aushebeln【375448051732527†L109-L112】.
+**Problem:** Die erwähnte Schwachstelle (CVE‑2026‑25253) demonstriert, dass Tokens an das Web geleakt werden können. Die Control‑UI leitete das `gatewayUrl` aus der URL ohne Validierung an den WebSocket‑Verbindungsaufbau weiter; dadurch konnte ein Angreifer das Gateway‑Token abfangen([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Weitere Untersuchungen zeigten, dass durch Cross‑Site‑WebSocket‑Hijacking selbst Gateways, die nur auf `localhost` hörten, kompromittiert werden konnten([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Zusätzlich konnten Angreifer Konfigurationsparameter wie `exec.approvals.set` oder `tools.exec.host` ändern und so die Sandbox aushebeln([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)).
 
-**Implikation:** Wenn ein Angreifer das Gateway‑Token stiehlt, erhält er administrative Kontrolle über den Agenten. Er kann Sicherheitsmechanismen ausschalten, die Ausführung vom Container auf den Host umstellen und willkürliche Befehle ausführen. Bestehende LLM‑Sandboxen und Genehmigungssysteme schützen nicht vor dieser Klasse von Angriffen【375448051732527†L120-L125】. Der Vorfall belegt, dass eine einfache Bindung an `localhost` nicht ausreicht, wenn der Browser des Nutzers als Brücke missbraucht werden kann【375448051732527†L127-L135】.
+**Implikation:** Wenn ein Angreifer das Gateway‑Token stiehlt, erhält er administrative Kontrolle über den Agenten. Er kann Sicherheitsmechanismen ausschalten, die Ausführung vom Container auf den Host umstellen und willkürliche Befehle ausführen. Bestehende LLM‑Sandboxen und Genehmigungssysteme schützen nicht vor dieser Klasse von Angriffen([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Der Vorfall belegt, dass eine einfache Bindung an `localhost` nicht ausreicht, wenn der Browser des Nutzers als Brücke missbraucht werden kann([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)).
 
 **Lösungsansatz:** Unser Framework sieht vor, dass **Geheimnisse niemals in die Modell‑Prompts gelangen** und auch nicht an die UI weitergereicht werden. Tokens und Schlüssel werden ausschließlich vom **Secrets‑Broker** verwaltet. Wenn ein Runner eine API aufrufen muss, erhält er nur einen *opaquen Handle* vom Broker. Dieser Handle ist auf ein einzelnes Werkzeug, konkrete Parameter, einen sehr kurzen Zeitraum und einen bestimmten Runner begrenzt. Selbst wenn ein Angreifer den Handle abfangen würde, könnte er damit keine externen Dienste missbrauchen. Ferner wird die Control‑UI so gestaltet, dass sie keine direkten Token im Browser speichert; Verbindungen werden durch Pairing und mTLS abgesichert und Anfragen immer serverseitig signiert.
 
 ### 2.3 Unsichere Skill‑Ökosysteme
 
-**Problem:** Die Community von OpenClaw teilt Skills ohne strenge Prüfung. Viele dieser Pakete sind ungewartet oder enthalten Malware. Sicherheitsforscher wiesen nach, dass unzählige Skills uneingeschränkt Berechtigungen fordern, schädliche Nutzlasten enthalten oder sensible Daten exfiltrieren【962194542635939†L454-L459】. Die Mehrfachumbenennung des Projekts erleichtert Phishing und das Hochladen gefälschter Erweiterungen【962194542635939†L460-L463】. Ein Beispiel ist ein VS‑Code‑Plugin namens „ClawdBot Agent“, das sich als offizielles Werkzeug ausgab und Trojaner enthielt【962194542635939†L465-L467】.
+**Problem:** Die Community von OpenClaw teilt Skills ohne strenge Prüfung. Viele dieser Pakete sind ungewartet oder enthalten Malware. Sicherheitsforscher wiesen nach, dass unzählige Skills uneingeschränkt Berechtigungen fordern, schädliche Nutzlasten enthalten oder sensible Daten exfiltrieren([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)). Die Mehrfachumbenennung des Projekts erleichtert Phishing und das Hochladen gefälschter Erweiterungen([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)). Ein Beispiel ist ein VS‑Code‑Plugin namens „ClawdBot Agent“, das sich als offizielles Werkzeug ausgab und Trojaner enthielt([JFrog analysis](https://jfrog.com/blog/giving-openclaw-the-keys-to-your-kingdom-read-this-first/)).
 
 **Implikation:** Das Vertrauen in ein umfangreiches, weitgehend unkontrolliertes Skill‑Ökosystem führt dazu, dass Angreifer bösartige Erweiterungen verbreiten. Installiert der Nutzer eine solche Erweiterung, erhält der Angreifer Zugriff auf die gleichen Berechtigungen wie der Agent: Dateien lesen/schreiben, E‑Mails versenden oder Shell‑Befehle ausführen. Bisherige Mechanismen können den Umfang der Berechtigungen kaum einschränken, da Skills im selben Prozess wie der Agent laufen.
 
@@ -57,12 +84,20 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 Die nachstehenden Ziele leiten alle Designentscheidungen:
 
-1. **Token‑Null‑Exposition (G1).** Das LLM darf niemals Zugriff auf API‑Schlüssel, Tokens oder andere Geheimnisse erhalten. Geheimnisse verbleiben im Secrets‑Broker und werden nur als nicht wiederverwendbare Handles an Runner herausgegeben. So wird verhindert, dass ein kompromittiertes LLM Tokens exfiltriert oder in Prompts weiterleitet.【375448051732527†L60-L79】
+1. **Token‑Null‑Exposition (G1).** Das LLM darf niemals Zugriff auf API‑Schlüssel, Tokens oder andere Geheimnisse erhalten. Geheimnisse verbleiben im Secrets‑Broker und werden nur als nicht wiederverwendbare Handles an Runner herausgegeben. So wird verhindert, dass ein kompromittiertes LLM Tokens exfiltriert oder in Prompts weiterleitet.([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html))
 2. **Standardmäßiges Verweigern (G2).** Es sind keine Aktionen ohne explizite Genehmigung erlaubt. Alle Fähigkeiten sind zunächst deaktiviert; Nutzer müssen sie pro Agent, Workspace oder Job explizit freischalten.
 3. **Vertragsbasierte Ausführung (G3).** Jedes Tool wird ausschließlich im Rahmen eines genehmigten Vertrags ausgeführt – entweder einmalig (One‑Shot) oder wiederverwendbar (für Jobs). Verträge definieren Parametergrenzen, Budgets, Datenhandhabung und Gültigkeitsdauer.
 4. **Isolierte Ausführung (G4).** Die Agenten‑Engine darf keine Tools direkt ausführen. Werkzeuge werden in **Runnern** (WASM‑Sandboxen oder isolierten Containern) ausgeführt. Native Funktionen sind nur über Companion‑Services möglich, die per mTLS authentifiziert sind.
 5. **Vertrauenswürdige Bestätigungen (G5).** Risikenbehaftete Aktionen (z. B. externe Sendungen, Dateischreibzugriffe) erfordern eine Bestätigung über die Control‑UI (paart mit Endgerät). Genehmigungen über Chat‑Nachrichten werden nicht akzeptiert.
 6. **Auditierbarkeit (G6).** Alle Entscheidungen (Allow, Deny, Approval), alle Tool‑Aufrufe, Artefakterstellungen und ausgehenden Aktionen werden lückenlos in einer unveränderlichen Audit‑Log aufgezeichnet.
+
+Zusätzlich definieren wir ein **Standard‑Hardening‑Profil**, das für neue Installationen aktiv ist:
+
+- Gateway nur über `localhost` und Pairing erreichbar, keine öffentlichen Interfaces ohne explizite Policy.
+- Striktes Deny‑by‑Default für Fähigkeiten, Netz‑Egress ausschließlich per Allowlist.
+- Keine Token oder Secrets im Browser oder im LLM‑Kontext.
+- High‑Risk‑Tools in Jobs standardmäßig deaktiviert; Step‑up‑Approval über die Control‑UI.
+- Output‑Redaction und Artefakt‑Limits aktiv, um PII und Secrets zu schützen.
 
 
 ## 4 Bedrohungsmodell
@@ -70,7 +105,7 @@ Die nachstehenden Ziele leiten alle Designentscheidungen:
 Das Framework schützt vor folgenden Angriffsvektoren:
 
 - **Prompt‑Injection und bösartige Nutzereingaben.** Untrusted Input, egal ob aus Chat, Web oder E‑Mails, darf nicht ungefiltert zu hochprivilegierten Aktionen führen.  
-- **Angriffe auf die UI (Cross‑Site‑Hijacking).** Tokens dürfen nicht im Browser gespeichert werden; mTLS und strikte Header‑Validierung sind Pflicht, um RCEs wie CVE‑2026‑25253 zu verhindern【375448051732527†L98-L112】.  
+- **Angriffe auf die UI (Cross‑Site‑Hijacking).** Tokens dürfen nicht im Browser gespeichert werden; mTLS und strikte Header‑Validierung sind Pflicht, um RCEs wie CVE‑2026‑25253 zu verhindern([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)).  
 - **Malware in Skills/Plugins.** Nur signierte WASM‑Skills dürfen installiert werden; native Code läuft isoliert.  
 - **Offene Ports und Fehlkonfiguration.** Das Gateway ist standardmäßig nur über `localhost` erreichbar. Ausnahmen erfordern explizite Netzwerkrichtlinien.  
 - **Exfiltration über Tools oder Artefakte.** Output‑Filter verhindern, dass Secrets, PII oder Tokens aus dem System ausgeleitet werden.  
@@ -91,7 +126,9 @@ Die Architektur ist modular aufgebaut (siehe Abbildung 1). Hauptkomponenten:
 7. **Scheduler:** Führt wiederverwendbare Verträge zeitgesteuert oder ereignisgesteuert unter strenger Policy aus.
 8. **Audit‑Log:** Unveränderliche Protokolle aller Aktivitäten, Entscheidungsvorgänge, Verträge, Genehmigungen und Artefakterstellungen.
 
-![Hohe-Level-Architektur-Diagramm](assets/architecture_diagram.png)
+![High‑Level‑Architekturdiagramm](assets/architecture_diagram.png)
+
+Abbildung 1: High‑Level‑Architekturdiagramm.
 
 
 ## 6 Verträge: einheitliche Autorisierungsobjekte
@@ -144,10 +181,12 @@ Das Framework implementiert einen **Secrets‑Broker**, der langfristige Schlüs
 
 1. **Policy erteilt Erlaubnis:** Bei erfolgreicher Prüfung generiert die Policy einen internen Entscheidungseintrag.  
 2. **Runner fordert Handle an:** Er ruft `AcquireHandle(decision_id, tool_call_id)` beim Broker auf.  
-3. **Broker prüft:** Ist die Entscheidung gültig? Stimmt der Runner‑Identität? Sind die Paramater gebunden?  
+3. **Broker prüft:** Ist die Entscheidung gültig? Stimmt der Runner‑Identität? Sind die Parameter gebunden?  
 4. **Broker gibt Handle zurück:** Der Handle ist nur für diesen einen Aufruf, das spezifische Werkzeug, den Parameter‑Hash und eine kurze TTL gültig.  
 5. **Runner führt Aktion aus:** Mit dem Handle ruft der Runner intern die API auf.  
 6. **Handle verliert seine Gültigkeit:** Er kann nicht wiederverwendet oder außerhalb des Runners exfiltriert werden.
+
+Das LLM erhält lediglich die `decision_id` und Metadaten, aber niemals den Handle selbst. Der Broker fungiert als **Token‑Delegationsschicht**: pro Tool‑Call wird ein einmaliger, eng gebundener Delegations‑Handle ausgestellt, der ausschließlich im Runner verwendbar ist.
 
 Im Gegensatz zu Token‑Weitergabe (wie bei OpenClaw) wird so sichergestellt, dass Angreifer selbst beim Abfangen des Handles nichts anfangen können; sie bräuchten zusätzlich die Identität des Runners, den Entscheidungseintrag und den Parameter‑Hash.
 
@@ -184,20 +223,33 @@ Braucht ein Skill nativen Zugriff (z. B. Hardware, Browser‑Automation), so mu
 
 Durch diese Trennung kann native Code sicher verwaltet werden, ohne dass das WASM‑Plugin unkontrollierten Zugang zum Host erhält.
 
+### 10.3 MCP‑Server als Skills (optional)
+
+Statt eines eigenen Plugin‑Ökosystems können **MCP‑Server** als Skills modelliert werden. Jeder MCP‑Server wird wie ein Skill registriert und erhält ein Manifest mit Tool‑Schemas, Auth‑Methoden und Capability‑Mapping. Die Policy‑Engine prüft **jeden** MCP‑Tool‑Call; der Runner fungiert als Proxy und erzwingt Parametergrenzen, Budgets und Egress‑Allowlists.
+
+Es gibt zwei Betriebsarten:
+
+- **Lokale MCP‑Server:** laufen in einer Sandbox oder als Companion‑Service mit minimalen Rechten. Der Zugriff erfolgt über mTLS oder lokale Socket‑Policy.
+- **Remote MCP‑Server:** werden nur über Allowlists angesprochen, benötigen starke Authentifizierung (mTLS/OAuth) und erhalten pro Aufruf einen delegierten Handle vom Secrets‑Broker. Tokens bleiben beim Broker; der LLM sieht keine Credentials.
+
+So lässt sich die Flexibilität von MCP nutzen, ohne die Sicherheitsgarantien der Vertragsarchitektur aufzugeben.
+
 
 ## 11 Zeitgesteuerte und ereignisgesteuerte Automatisierung
 
-Das Framework unterstützt Cron‑Jobs, Event‑Trigger (Webhook, Datenbank‑Änderungen etc.) und One‑Shot‑Timer. Kernelemente:
+Das Framework unterstützt Cron‑Jobs, Event‑Trigger (Webhook, Datenbank‑Änderungen etc.), **konditionale Regeln** und One‑Shot‑Timer. Kernelemente:
 
 - **Job‑Principals:** Jede geplante Aufgabe läuft als eigener principal (`job:<id>`). Ein Job hat ein zugehöriges wiederverwendbares Vertragsobjekt, das Tools, Parameter‑Allowlisten, Budgets und Datenrichtlinien definiert.
 - **Misfire‑Strategien und Zeitverwaltung:** Zeitpläne werden in UTC gespeichert, aber in der lokalen Zeitzone interpretiert. Job‑Verpasste Ausführungen können übersprungen oder nachgeholt werden, je nach Konfiguration.
 - **Strikt limitierte Budgets:** Cron‑Jobs haben kleinere Budgets als interaktive Sitzungen. Keine Shell‑Ausführung und keine neuen Fähigkeiten ohne Genehmigung.
-- **Idempotenz:** Jede Side‑Effect‑Aktion hat einen Idempotenz‑Key (`job_run_id + action_hash`). Bei Wiederholungen (z. B. Retries) werden Duplikate verhindert.  
+- **Idempotenz und Outbox:** Jede Side‑Effect‑Aktion hat einen Idempotenz‑Key (`job_run_id + action_hash`). Retries prüfen eine Outbox, bevor gesendet, gepostet oder mutiert wird.  
 
 Bei Änderungen an Tools, Policies, Skill‑Versionen oder Parametern pausiert der Scheduler den Job und zeigt dem Nutzer einen Änderungs‑Diff zur erneuten Freigabe.
 
 
 ## 12 Multi‑Agent‑Unterstützung und Orchestrierung
+
+Das Identitätsmodell unterscheidet **Benutzer**, **Agenten** und **Principals** (Sitzung/Job). Jeder Tool‑Call ist an einen Principal gebunden, wodurch Rechte und Budgets präzise getrennt werden können.
 
 ### 12.1 Agentenprofile
 
@@ -302,20 +354,27 @@ Für die Zusammenarbeit im GitHub‑Repository wird eine klare Struktur empfohle
 
 ```
 repo/
-  docs/whitepaper/WHITEPAPER.md      # Dieses Dokument
+  docs/whitepaper_de.md              # Whitepaper (Deutsch)
+  docs/whitepaper_en.md              # Whitepaper (English)
+  docs/assets/architecture_diagram.png
   apps/
     gateway/                         # Channels, UI, Pairing
     control-ui/                      # Web-UI für Genehmigungen, Jobs, Audit
     engine/                          # Agenten-Loop
     policy/                          # Policy-Engine
-    runner/                          # Tool-Ausführung
+    runner/                          # Tool-Ausführung (Runner-Pool)
+    worker/                          # Hintergrund-Worker für Jobs/Queues
     broker/                          # Secrets-Broker
     scheduler/                       # Cron/Event Scheduler
   packages/
     core/                            # Gemeinsame Typen und Schemas
+    agent-runtime/                   # Agent-Laufzeit, Zustände, Session-Handling
     contracts/                       # Hashing, Diff, Validierung
     policy/                          # DSL und Evaluator
+    scheduler-lib/                   # Scheduling-Utilities, Kalenderlogik
+    queue/                           # Job- und Tool-Dispatch
     wasm-runtime/                    # WASM-Ausführungsumgebung
+    tools-sdk/                       # SDK für Tool-Adapter und MCP-Bridges
     skill-sdk/                       # Manifest- und Tool-Schema-Hilfen
     artifacts/                       # Artefaktspeicher und Scanner
     audit/                           # Audit-Log-Implementierung
@@ -332,8 +391,26 @@ repo/
 
 Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests für jede Schicht und schafft einen klaren Einstiegspunkt für Beiträge.
 
+**Test‑Strategien:** Wir empfehlen Policy‑Regressionstests (Allow/Deny‑Matrix), Vertrag‑Diff‑Tests, einen Prompt‑Injection‑Korpus, Sandbox‑Escape‑Tests, sowie End‑to‑End‑Workflows mit Artefakten und MCP/WASM‑Skills. Sicherheitsrelevante Änderungen müssen alle Tests bestehen, bevor neue Skills oder Policies freigegeben werden.
 
-## 18 Ausblick und Roadmap
+
+
+## 18 Glossar
+
+- **Agent:** Konfigurierter Assistent mit Persona, Skills und Policy‑Profil.
+- **Principal:** Sicherheitsidentität für Sitzung oder Job, an die Tool‑Aufrufe gebunden sind.
+- **Vertrag (Contract):** Autorisierungsobjekt mit Tools, Parametern, Budgets und Datenregeln.
+- **Fähigkeit (Capability):** Feingranularer Zugriff auf eine Tool‑Klasse mit Parametergrenzen.
+- **Policy‑Engine:** Bewertet Tool‑Aufrufe gegen Verträge, Budgets und Risikoklassen.
+- **Runner:** Isolierte Ausführungsumgebung für Tools (WASM/Container).
+- **Secrets‑Broker:** Verwaltet langfristige Geheimnisse und gibt kurzlebige Handles aus.
+- **Skill:** Signiertes Tool‑Paket (WASM oder MCP‑Server) mit Manifest.
+- **Artefakt:** Externer Datensatz für große Ausgaben (Patch, Report, LogBundle).
+- **Job‑Principal:** Principal eines geplanten Jobs mit restriktiven Rechten.
+- **Control‑UI:** Vertrauenswürdige Oberfläche für Genehmigungen und Pairing.
+- **Datenwächter (Data Guards):** Filter für Prompt‑Injection, PII und Secrets auf Ein‑/Ausgaben.
+
+## 19 Ausblick und Roadmap
 
 Die vorgestellte Architektur bildet die Grundlage für ein sicheres Agentenframework. In zukünftigen Versionen sollen folgende Themen vertieft werden:
 
@@ -345,6 +422,6 @@ Die vorgestellte Architektur bildet die Grundlage für ein sicheres Agentenframe
 - **Multi‑Tenant‑Hardening (v0.5):** Richtlinien für Mandantentrennung und verschlüsselte Artefakt‑Speicher.  
 
 
-## 19 Schlussbemerkung
+## 20 Schlussbemerkung
 
 Die wachsende Verbreitung autonomer Agenten erfordert einen Paradigmenwechsel: Weg vom „Assistenten mit allen Rechten“ hin zu **vertraglichen Agenten**, die nur das tun dürfen, was explizit genehmigt wurde. Durch Verträge, klare Fähigkeiten, einen vermittelnden Secrets‑Broker, isolierte Runner, signierte WASM‑Skills und strenge Audit‑Logs reduziert das vorgeschlagene Framework die Angriffsfläche drastisch. Gleichzeitig bleibt die Benutzererfahrung vertraut: ein lokaler Gateway‑Chat mit Control‑UI, Pairing und Skills – nur eben mit dem Sicherheitsniveau, das moderne Anwendungen verlangen.
