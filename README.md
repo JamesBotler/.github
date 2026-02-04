@@ -178,3 +178,7 @@ Default hardening includes localhost-only gateway access, strict allowlists, no 
 - Structured output support (OpenAI): [OpenAI Structured Outputs](https://openai.com/index/introducing-structured-outputs-in-the-api/)
 - Structured output support (Gemini): [Gemini structured output](https://ai.google.dev/gemini-api/docs/structured-output)
 - Structured output support (Mistral): [Mistral structured outputs](https://docs.mistral.ai/capabilities/structured-output/structured_output_overview/)
+
+## Documentation Maintenance
+
+This documentation is and will be further improved using AI and human supervision.
