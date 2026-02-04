@@ -18,10 +18,11 @@
 14. Speicherbereiche und Promotion
 15. Audit, Observability und Forensik
 16. Referenz‑Workflows
-17. Deployment und Monorepo‑Struktur
-18. Glossar
-19. Ausblick und Roadmap
-20. Schlussbemerkung
+17. Pseudocode‑Beispiele
+18. Deployment und Monorepo‑Struktur
+19. Glossar
+20. Ausblick und Roadmap
+21. Schlussbemerkung
 
 ## 1 Einleitung
 
@@ -359,7 +360,16 @@ Um die Architektur greifbar zu machen, werden im Folgenden zwei typische Workflo
 **Sicherheit:** Die Generierung, Tests und Review laufen ohne Schreibzugriff auf das Repository. Nur der Applier hat begrenzte Schreibrechte, und seine Aktion erfordert eine separate Genehmigung. So reduziert sich das Risiko, dass ein Fehler oder eine Prompt‑Injektion unkontrolliert Code in die Produktionsumgebung einbringt.
 
 
-## 17 Deployment und Monorepo‑Struktur
+
+## 17 Pseudocode‑Beispiele
+
+Die folgenden Dateien enthalten technologie‑neutrale Abläufe und dienen als Implementierungsleitfaden:
+
+- Interaktiver E‑Mail‑Flow (One‑Shot): [01_interactive_email_flow.md](../pseudo_code/01_interactive_email_flow.md)
+- Geplanter Digest‑Job (Reusable): [02_scheduled_digest_job.md](../pseudo_code/02_scheduled_digest_job.md)
+- Policy/Runner‑Pipeline: [03_policy_toolcall_pipeline.md](../pseudo_code/03_policy_toolcall_pipeline.md)
+
+## 18 Deployment und Monorepo‑Struktur
 
 Für die Zusammenarbeit im GitHub‑Repository wird eine klare Struktur empfohlen:
 
@@ -406,7 +416,7 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 
 
 
-## 18 Glossar
+## 19 Glossar
 
 - **Agent:** Konfigurierter Assistent mit Persona, Skills und Policy‑Profil.
 - **Principal:** Sicherheitsidentität für Sitzung oder Job, an die Tool‑Aufrufe gebunden sind.
@@ -421,7 +431,7 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 - **Control‑UI:** Vertrauenswürdige Oberfläche für Genehmigungen und Pairing.
 - **Datenwächter (Data Guards):** Filter für Prompt‑Injection, PII und Secrets auf Ein‑/Ausgaben.
 
-## 19 Ausblick und Roadmap
+## 20 Ausblick und Roadmap
 
 Die vorgestellte Architektur bildet die Grundlage für ein sicheres Agentenframework. In zukünftigen Versionen sollen folgende Themen vertieft werden:
 
@@ -433,6 +443,6 @@ Die vorgestellte Architektur bildet die Grundlage für ein sicheres Agentenframe
 - **Multi‑Tenant‑Hardening (v0.5):** Richtlinien für Mandantentrennung und verschlüsselte Artefakt‑Speicher.  
 
 
-## 20 Schlussbemerkung
+## 21 Schlussbemerkung
 
 Die wachsende Verbreitung autonomer Agenten erfordert einen Paradigmenwechsel: Weg vom „Assistenten mit allen Rechten“ hin zu **vertraglichen Agenten**, die nur das tun dürfen, was explizit genehmigt wurde. Durch Verträge, klare Fähigkeiten, einen vermittelnden Secrets‑Broker, isolierte Runner, signierte WASM‑Skills und strenge Audit‑Logs reduziert das vorgeschlagene Framework die Angriffsfläche drastisch. Gleichzeitig bleibt die Benutzererfahrung vertraut: ein lokaler Gateway‑Chat mit Control‑UI, Pairing und Skills – nur eben mit dem Sicherheitsniveau, das moderne Anwendungen verlangen.

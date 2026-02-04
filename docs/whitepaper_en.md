@@ -18,10 +18,11 @@
 14. Memory scopes and promotion
 15. Audit, observability and forensics
 16. End‑to‑end reference workflows
-17. Deployment and monorepo structure
-18. Glossary
-19. Outlook and roadmap
-20. Closing remarks
+17. Pseudocode examples
+18. Deployment and monorepo structure
+19. Glossary
+20. Outlook and roadmap
+21. Closing remarks
 
 ## 1 Executive summary
 
@@ -358,7 +359,16 @@ This section provides two typical workflows with contracts.
 **Security:** Generation, tests and review run without write access to the repository. Only the applier has limited write rights, and the action requires a separate approval. This reduces the risk of an error or prompt injection bringing uncontrolled code into the production environment.
 
 
-## 17 Deployment and monorepo structure
+
+## 17 Pseudocode Examples
+
+The following files provide technology‑neutral reference flows:
+
+- Interactive email flow (one‑shot): [01_interactive_email_flow.md](../pseudo_code/01_interactive_email_flow.md)
+- Scheduled digest job (reusable): [02_scheduled_digest_job.md](../pseudo_code/02_scheduled_digest_job.md)
+- Policy/runner pipeline: [03_policy_toolcall_pipeline.md](../pseudo_code/03_policy_toolcall_pipeline.md)
+
+## 18 Deployment and monorepo structure
 
 For collaboration on GitHub, a clear structure is recommended:
 
@@ -405,7 +415,7 @@ This structure aids component separation, enables CI tests for each layer and pr
 
 
 
-## 18 Glossary
+## 19 Glossary
 
 - **Agent:** Configured assistant with persona, skills and a policy profile.
 - **Principal:** Security identity for a session or job to which tool calls are bound.
@@ -420,7 +430,7 @@ This structure aids component separation, enables CI tests for each layer and pr
 - **Control UI:** Trusted approval and pairing surface.
 - **Data Guards:** Filters for prompt injection, PII and secret leakage.
 
-## 19 Outlook and roadmap
+## 20 Outlook and roadmap
 
 The presented architecture lays the foundation for a secure agent framework. Future versions should focus on the following topics:
 
@@ -432,6 +442,6 @@ The presented architecture lays the foundation for a secure agent framework. Fut
 - **Multi‑tenant hardening (v0.5):** Policies for tenant separation and encrypted artifact storage.  
 
 
-## 20 Closing remarks
+## 21 Closing remarks
 
 The growing prevalence of autonomous agents demands a paradigm shift: away from the “assistant with all rights” toward **contractual agents** that may only do what has been explicitly authorized. Through contracts, clear capabilities, a brokered secrets layer, isolated runners, signed WASM skills and strict audit logs, the proposed framework dramatically reduces the attack surface. At the same time, the user experience remains familiar: a local gateway chat with Control UI, pairing and skills – but with the level of security that modern applications require.
