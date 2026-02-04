@@ -6,11 +6,11 @@ A secure-by-design framework for building personal assistants, companion agents 
 
 ## Quick Links
 
-- German whitepaper: [whitepaper_de.md](../docs/whitepaper_de.md)
-- English whitepaper: [whitepaper_en.md](../docs/whitepaper_en.md)
-- Architecture diagram: [architecture_diagram.png](../docs/assets/architecture_diagram.png)
-- Compose deployment proposal: [deployment_docker_compose.md](../docs/deployment_docker_compose.md)
-- Pseudocode examples: [pseudo_code/](../pseudo_code/)
+- German whitepaper: [whitepaper_de.md](./docs/whitepaper_de.md)
+- English whitepaper: [whitepaper_en.md](./docs/whitepaper_en.md)
+- Architecture diagram: [architecture_diagram.png](./docs/assets/architecture_diagram.png)
+- Compose deployment proposal: [deployment_docker_compose.md](./docs/deployment_docker_compose.md)
+- Pseudocode examples: [pseudo_code/](./pseudo_code/)
 
 ## Problem and Evidence
 
@@ -81,7 +81,7 @@ See the `pseudo_code/` directory for technology-neutral flows:
 
 ## Deployment Proposal
 
-See [deployment_docker_compose.md](../docs/deployment_docker_compose.md) for a compose-based deployment proposal with non-root containers and early privilege drop.
+See [deployment_docker_compose.md](./docs/deployment_docker_compose.md) for a compose-based deployment proposal with non-root containers and early privilege drop.
 
 ## Memory Scopes
 
