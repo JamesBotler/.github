@@ -127,7 +127,7 @@ Die Architektur ist modular aufgebaut (siehe Abbildung 1). Hauptkomponenten:
 7. **Scheduler:** Führt wiederverwendbare Verträge zeitgesteuert oder ereignisgesteuert unter strenger Policy aus.
 8. **Audit‑Log:** Unveränderliche Protokolle aller Aktivitäten, Entscheidungsvorgänge, Verträge, Genehmigungen und Artefakterstellungen.
 
-![High‑Level‑Architekturdiagramm](assets/architecture_diagram.png)
+![High‑Level‑Architekturdiagramm](./assets/architecture_diagram.png)
 
 Abbildung 1: High‑Level‑Architekturdiagramm.
 
@@ -371,7 +371,7 @@ Die folgenden Dateien enthalten technologie‑neutrale Abläufe und dienen als I
 
 ## 18 Deployment und Monorepo‑Struktur
 
-Siehe auch die Compose‑Deployment‑Notiz: [deployment_docker_compose.md](deployment_docker_compose.md).
+Siehe auch die Compose‑Deployment‑Notiz: [deployment_docker_compose.md](./deployment_docker_compose.md).
 
 Für die Zusammenarbeit im GitHub‑Repository wird eine klare Struktur empfohlen:
 
