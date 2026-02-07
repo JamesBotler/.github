@@ -65,7 +65,7 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 **Implikation:** Das Vertrauen in ein umfangreiches, weitgehend unkontrolliertes Skill‑Ökosystem führt dazu, dass Angreifer bösartige Erweiterungen verbreiten. Installiert der Nutzer eine solche Erweiterung, erhält der Angreifer Zugriff auf die gleichen Berechtigungen wie der Agent: Dateien lesen/schreiben, E‑Mails versenden oder Shell‑Befehle ausführen. Bisherige Mechanismen können den Umfang der Berechtigungen kaum einschränken, da Skills im selben Prozess wie der Agent laufen.
 
-**Lösungsansatz:** In unserer Architektur sind Skills **WASM‑Module**, die streng isoliert ausgeführt werden. Jedes Skill‑Paket enthält eine signierte Manifestdatei mit deklarativen Beschreibungen: ID, Version, Herausgeber, erforderliche Capabilities, Schema der Werkzeuge und erlaubte Netzwerkziele. Bei der Installation wird die Signatur verifiziert und das Skill muss durch den Nutzer explizit aktiviert werden. Tools innerhalb des Skills haben nur Zugriff auf die vom Policy‑Engine genehmigten Ressourcen. Wenn native Funktionalität nötig ist (z. B. Hardware‑Zugriff), muss ein zweistufiges Plugin genutzt werden: Das WASM‑Modul orchestriert die Logik; eine separate **Native Companion Service** führt die Aktion in einer isolierten Umgebung aus. Dieser Dienst ist über mTLS authentifiziert, und jede Anfrage ist an einen genehmigten Vertrag und eine Entscheidung gebunden.  
+**Lösungsansatz:** In unserer Architektur sind Skills **WASM‑Module**, die streng isoliert ausgeführt werden. Jedes Skill‑Paket enthält eine signierte Manifestdatei mit deklarativen Beschreibungen: ID, Version, Herausgeber, erforderliche Capabilities, Schema der Werkzeuge und erlaubte Netzwerkziele. Bei der Installation wird die Signatur **und die Publisher‑Trust‑Chain** (Root in einer Allowlist oder auditierter Schlüssel) verifiziert und die Eintragung in einem Transparenz‑Log geprüft; gesperrte Publisher werden blockiert. Das Skill muss durch den Nutzer explizit aktiviert werden. Tools innerhalb des Skills haben nur Zugriff auf die vom Policy‑Engine genehmigten Ressourcen. Wenn native Funktionalität nötig ist (z. B. Hardware‑Zugriff), muss ein zweistufiges Plugin genutzt werden: Das WASM‑Modul orchestriert die Logik; eine separate **Native Companion Service** führt die Aktion in einer isolierten Umgebung aus. Dieser Dienst ist über mTLS authentifiziert, und jede Anfrage ist an einen genehmigten Vertrag und eine Entscheidung gebunden.  
 
 ### 2.4 Unbeaufsichtigte Automatisierung
 
@@ -274,7 +274,7 @@ Jedes Skill besteht aus einer signierten **WASM‑Modul**‐Datei und einem **Ma
 - Eine Liste der Werkzeuge (`tools`), ihre Namen, Eingabe‑ und Ausgabeschemata und eine Risikoklasse.  
 - Erforderliche Capabilities (`required_capabilities`) und erlaubte Egress‑Ziele (`egress_requirements`).  
 
-Die Skill‑Registry verifiziert beim Import die Signatur. Wird ein Skill installiert, muss der Nutzer ihn in der Control UI pro Agent / Workspace aktivieren. Werkzeuge dürfen nur die im Manifest deklarierten Capabilities nutzen; andere Aufrufe werden von der Policy verweigert.
+Die Skill‑Registry verifiziert beim Import die Signatur **und die Publisher‑Trust‑Chain** und prüft die Eintragung im Transparenz‑Log. Wird ein Skill installiert, muss der Nutzer ihn in der Control UI pro Agent / Workspace aktivieren. Werkzeuge dürfen nur die im Manifest deklarierten Capabilities nutzen; andere Aufrufe werden von der Policy verweigert.
 
 Benötigt ein Skill API‑Keys oder Tokens, werden Secrets über den in **Abschnitt 8.1** beschriebenen Control UI‑Flow bereitgestellt und gelangen niemals in den LLM‑Kontext.
 
@@ -496,6 +496,7 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 - **Untrusted Artefact:** Artifact, das standardmäßig als untrusted gilt; per Hash mit Provenienz gespeichert, beim Schreiben/Lesen gescannt und nur mit expliziter Allowlist oder Genehmigung erneut ingestiert.
 - **Job‑Principal:** Principal eines geplanten Jobs mit restriktiven Rechten.
 - **Control UI:** Vertrauenswürdige Oberfläche für Genehmigungen und Pairing.
+- **Publisher‑Trust‑Chain:** Verifizierte Herkunft der Publisher‑Keys (Root in Allowlist oder auditierter Root) plus Transparenz‑Log‑Inklusion und Revocation‑Prüfungen.
 - **Pairing‑Token:** Kurzlebiger, einmaliger Code zur Bindung eines Geräts an das Gateway.
 - **Gerätegebundenes Pairing:** Pairing‑Flow mit Besitznachweis des Geräteschlüssels sowie strikten Origin/CSRF‑Checks.
 - **Data Guards:** Filter für Prompt‑Injection, PII und Secrets auf Ein‑/Ausgaben.

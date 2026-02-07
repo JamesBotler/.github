@@ -66,7 +66,7 @@ This white paper summarises our chat discussions and introduces a new framework 
 
 **Implication:** Trusting an unregulated skills ecosystem means attackers can spread malicious extensions. If a user installs such a skill, the attacker inherits the agent’s privileges: reading/writing files, sending emails, running shell commands. Existing mechanisms can barely limit these permissions because skills run in the same process as the agent.
 
-**Solution:** In our architecture, skills are **WASM modules** executed in isolation. Each skill package contains a signed manifest declaring its ID, version, publisher, required capabilities, tool schemas and allowed network targets. Installation verifies the signature, and the user must explicitly enable the skill per agent or workspace. Tools within a skill can only access resources approved by the policy engine. When native functionality is required (e.g., hardware access), developers must adopt a two‑stage approach: the WASM module orchestrates logic, and a separate **native companion service** performs the action in an isolated environment. This service is authenticated via mTLS, and each request is bound to an approved contract and policy decision.
+**Solution:** In our architecture, skills are **WASM modules** executed in isolation. Each skill package contains a signed manifest declaring its ID, version, publisher, required capabilities, tool schemas and allowed network targets. Installation verifies the signature **and the publisher trust chain** (rooted in an allowlisted or audited key), and checks inclusion in a transparency log; revoked publishers are blocked. The user must explicitly enable the skill per agent or workspace. Tools within a skill can only access resources approved by the policy engine. When native functionality is required (e.g., hardware access), developers must adopt a two‑stage approach: the WASM module orchestrates logic, and a separate **native companion service** performs the action in an isolated environment. This service is authenticated via mTLS, and each request is bound to an approved contract and policy decision.
 
 ### 2.4 Unsupervised automation
 
@@ -275,7 +275,7 @@ Each skill consists of a signed **WASM module** and a **manifest**. The manifest
 - A list of tools (`tools`), their names, input and output schemas and a risk class.  
 - Required capabilities (`required_capabilities`) and allowed network targets (`egress_requirements`).  
 
-The skill registry verifies the signature at import. When a skill is installed, the user must enable it in the Control UI per agent or workspace. Tools may only use the capabilities declared in the manifest; other calls are denied by policy.
+The skill registry verifies the signature and **publisher trust chain** at import, and checks transparency log inclusion. When a skill is installed, the user must enable it in the Control UI per agent or workspace. Tools may only use the capabilities declared in the manifest; other calls are denied by policy.
 
 If a skill requires API keys or tokens, secrets are provisioned through the Control UI flow described in **Section 8.1**, ensuring they never enter the LLM context.
 
@@ -495,6 +495,7 @@ This structure aids component separation, enables CI tests for each layer and pr
 - **Untrusted Artefact:** Artifact treated as untrusted by default; stored by hash with provenance, scanned on write/read, and re‑ingested only with explicit allowlist or approval.
 - **Job Principal:** Principal for scheduled jobs with tight rights and budgets.
 - **Control UI:** Trusted approval and pairing surface.
+- **Publisher Trust Chain:** Verified lineage of publisher keys (rooted in an allowlist or audited root) plus transparency log inclusion and revocation checks.
 - **Pairing Token:** Short‑lived, single‑use code used to bind a device to the gateway.
 - **Device‑Bound Pairing:** Pairing flow that requires proof of possession of a device key and strict origin/CSRF checks.
 - **Data Guards:** Filters for prompt injection, PII and secret leakage.
