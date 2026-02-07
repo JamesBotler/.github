@@ -213,6 +213,7 @@ The policy engine writes every decision to the audit log. When evaluating a tool
 6. Logs the result and returns allow/deny/approval.
 
 Before policy evaluation starts, the engine validates all tool proposals and decision objects against the schema. Only schema‑conforming outputs enter evaluation; invalid responses are discarded or retried.
+To prevent serialization drift, tool calls are **canonicalized** (deterministic encoding and key ordering) and hashed. The policy decision is bound to this canonical hash, and the runner recomputes and verifies it before execution; any mismatch is rejected.
 
 ### 7.1 Structured Outputs (Schema‑First LLM I/O)
 
@@ -229,7 +230,7 @@ The framework implements a **secrets broker** that manages long‑lived keys and
 1. **Policy grants permission:** On successful evaluation the policy generates an internal decision record.  
 2. **Runner requests handle:** It calls `AcquireHandle(decision_id, tool_call_id)` on the broker.  
 3. **Broker verifies:** Is the decision valid? Does the runner identity match? Are parameters bound?  
-4. **Broker returns handle:** The handle is valid only for this call, this tool, a specific parameter hash and a brief TTL.  
+4. **Broker returns handle:** The handle is valid only for this call, this tool, a specific parameter hash (derived from the canonicalized tool call) and a brief TTL.  
 5. **Runner performs action:** It uses the handle internally to call the API.  
 6. **Handle expires:** It cannot be reused or exfiltrated outside the runner.
 
@@ -489,6 +490,7 @@ This structure aids component separation, enables CI tests for each layer and pr
 - **Control UI:** Trusted approval and pairing surface.
 - **Data Guards:** Filters for prompt injection, PII and secret leakage.
 - **Structured Output:** Schema‑constrained LLM response format used for tool calls and decisions.
+- **Canonical Tool‑Call Hash:** Deterministic hash of the canonicalized tool call used to bind policy decisions and runner execution.
 
 ## 20 Outlook and roadmap
 

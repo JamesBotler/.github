@@ -212,6 +212,7 @@ Die Policy‑Engine speichert jede Entscheidung im Audit‑Log. Bei einem Tool�
 6. Ergebnis protokollieren und Entscheidung zurückgeben (Allow / Deny / Approval).  
 
 Bevor die Policy‑Prüfung startet, validiert die Engine alle Tool‑Vorschläge und Entscheidungsobjekte gegen das Schema. Nur schema‑konforme Outputs gelangen in die Evaluation; fehlerhafte Antworten werden verworfen oder erneut angefordert.
+Um Serialisierungsdrift zu verhindern, werden Tool‑Calls **kanonisiert** (deterministische Kodierung und Schlüsselreihenfolge) und gehasht. Die Policy‑Entscheidung ist an diesen kanonischen Hash gebunden, und der Runner berechnet und prüft ihn vor der Ausführung; Abweichungen werden abgelehnt.
 
 ### 7.1 Structured Outputs (Schema‑First LLM I/O)
 
@@ -228,7 +229,7 @@ Das Framework implementiert einen **Secrets‑Broker**, der langfristige Schlüs
 1. **Policy erteilt Erlaubnis:** Bei erfolgreicher Prüfung generiert die Policy einen internen Entscheidungseintrag.  
 2. **Runner fordert Handle an:** Er ruft `AcquireHandle(decision_id, tool_call_id)` beim Broker auf.  
 3. **Broker prüft:** Ist die Entscheidung gültig? Stimmt der Runner‑Identität? Sind die Parameter gebunden?  
-4. **Broker gibt Handle zurück:** Der Handle ist nur für diesen einen Aufruf, das spezifische Werkzeug, den Parameter‑Hash und eine kurze TTL gültig.  
+4. **Broker gibt Handle zurück:** Der Handle ist nur für diesen einen Aufruf, das spezifische Werkzeug, den Parameter‑Hash (aus dem kanonisierten Tool‑Call abgeleitet) und eine kurze TTL gültig.  
 5. **Runner führt Aktion aus:** Mit dem Handle ruft der Runner intern die API auf.  
 6. **Handle verliert seine Gültigkeit:** Er kann nicht wiederverwendet oder außerhalb des Runners exfiltriert werden.
 
@@ -490,6 +491,7 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 - **Control UI:** Vertrauenswürdige Oberfläche für Genehmigungen und Pairing.
 - **Data Guards:** Filter für Prompt‑Injection, PII und Secrets auf Ein‑/Ausgaben.
 - **Structured Output:** Schema‑gebundene LLM‑Antworten für Tool‑Aufrufe und Entscheidungen.
+- **Kanonischer Tool‑Call‑Hash:** Deterministischer Hash des kanonisierten Tool‑Calls zur Bindung von Policy‑Entscheidung und Runner‑Ausführung.
 
 ## 20 Ausblick und Roadmap
 
