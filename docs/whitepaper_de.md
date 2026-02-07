@@ -202,6 +202,8 @@ Die Policy‑Engine ist der zentrale „Wächter“ zwischen Engine und Runner:
 - **Budgets:** Limiten für Tool‑Aufrufe, Laufzeit, Nachrichten, Bytes, Token und Kosten.  
 - **Data Guards:** Prüfen ein‑ und ausgehende Inhalte (Prompt‑Injection, PII, Geheimnisse). Sie können Nachrichten kürzen oder blockieren, wenn sensible Daten gefunden werden.  
 
+Data Guards arbeiten **deny‑by‑default beim Egress**: Ausgehende Inhalte müssen in erlaubte, typisierte Felder passen (keine rohen Blobs) und werden sowohl im Rohformat als auch nach Dekodierung geprüft (z. B. base64/hex/url/gzip). Eingaben und Tool‑Outputs werden **taint‑gelabelt**; tainted Daten dürfen das System nur verlassen, wenn der Vertrag diese Quelle explizit erlaubt oder der Nutzer die konkrete Ausgabe genehmigt. Artifacts werden per Hash referenziert; Inhalte dürfen ohne explizite Genehmigung nicht exfiltriert werden.
+
 Die Policy‑Engine speichert jede Entscheidung im Audit‑Log. Bei einem Tool‑Aufruf werden folgende Schritte ausgeführt:
 
 1. Vertrag laden und prüfen: Ist er gültig, nicht abgelaufen und genehmigt?  
@@ -492,6 +494,8 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 - **Data Guards:** Filter für Prompt‑Injection, PII und Secrets auf Ein‑/Ausgaben.
 - **Structured Output:** Schema‑gebundene LLM‑Antworten für Tool‑Aufrufe und Entscheidungen.
 - **Kanonischer Tool‑Call‑Hash:** Deterministischer Hash des kanonisierten Tool‑Calls zur Bindung von Policy‑Entscheidung und Runner‑Ausführung.
+- **Taint‑Label:** Herkunftsmarker für Daten aus Tools, Dateien oder externen Quellen, die strengere Egress‑Kontrollen erfordern.
+- **Egress‑Schema:** Allowlist‑basiertes, typisiertes Ausgabeschema, das vor dem Verlassen des Systems erzwungen wird.
 
 ## 20 Ausblick und Roadmap
 

@@ -203,6 +203,8 @@ The policy engine is the central gatekeeper between engine and runner:
 - **Budgets:** Limits for tool calls per run, runtime, messages, bytes, tokens and cost.  
 - **Data guards:** Inspect inbound and outbound content (prompt injection, PII, secrets). They may truncate or block messages containing sensitive data.  
 
+Data guards are **deny‑by‑default for egress**: outbound content must fit allowlisted, typed fields (no raw blobs) and is scanned in both raw and decoded forms (e.g. base64/hex/url/gzip). Inputs and tool outputs are **taint‑labeled**; tainted data can leave the system only if the contract explicitly allows that source or a user approves the specific output. Artifacts are referenced by hash; their contents cannot be exfiltrated without explicit approval.
+
 The policy engine writes every decision to the audit log. When evaluating a tool call, it:
 
 1. Loads the contract and checks if it is valid, not expired and approved.  
@@ -491,6 +493,8 @@ This structure aids component separation, enables CI tests for each layer and pr
 - **Data Guards:** Filters for prompt injection, PII and secret leakage.
 - **Structured Output:** Schema‑constrained LLM response format used for tool calls and decisions.
 - **Canonical Tool‑Call Hash:** Deterministic hash of the canonicalized tool call used to bind policy decisions and runner execution.
+- **Taint Label:** Provenance marker indicating data came from tools, files or external sources and requires stricter egress controls.
+- **Egress Schema:** Allowlisted, typed output structure enforced before data can leave the system.
 
 ## 20 Outlook and roadmap
 
