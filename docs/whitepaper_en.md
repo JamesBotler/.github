@@ -58,7 +58,7 @@ This white paper summarises our chat discussions and introduces a new framework 
 
 **Implication:** Stealing the gateway token grants administrative control over the agent. The attacker can turn off safety mechanisms, run commands on the host instead of the container and perform arbitrary actions. Existing sandbox and approval systems do not protect against this class of attack([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Binding to `localhost` alone is insufficient because the user’s browser can be abused as a bridge([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)).
 
-**Solution:** In our framework, **secrets never enter the model prompts** nor the UI. Tokens and keys remain exclusively in the **secrets broker**. When a runner must call an API, it receives only an *opaque handle* from the broker. This handle is bound to a single tool, specific parameters, a short timeframe and a specific runner. Even if an attacker intercepted the handle, they could not misuse it to call external services. The Control UI stores no tokens in the browser; connections are secured via pairing and mTLS, and requests are always server‑side signed.
+**Solution:** In our framework, **secrets never enter the model prompts** nor the UI. Tokens and keys remain exclusively in the **secrets broker**. When a runner must call an API, it receives only an *opaque handle* from the broker. This handle is bound to a single tool, specific parameters, a short timeframe and a specific runner. Even if an attacker intercepted the handle, they could not misuse it to call external services. The Control UI stores no tokens in the browser; connections are secured via pairing and mTLS, and requests are always server‑side signed. Pairing is **short‑lived, single‑use and device‑bound** (challenge signed by the device key), **origin/CSRF‑bound**, and **never uses URL parameters**; final binding requires explicit user confirmation on the device.
 
 ### 2.3 Insecure skill ecosystems
 
@@ -490,6 +490,8 @@ This structure aids component separation, enables CI tests for each layer and pr
 - **Artifact:** Externalized output for large data (patches, reports, log bundles).
 - **Job Principal:** Principal for scheduled jobs with tight rights and budgets.
 - **Control UI:** Trusted approval and pairing surface.
+- **Pairing Token:** Short‑lived, single‑use code used to bind a device to the gateway.
+- **Device‑Bound Pairing:** Pairing flow that requires proof of possession of a device key and strict origin/CSRF checks.
 - **Data Guards:** Filters for prompt injection, PII and secret leakage.
 - **Structured Output:** Schema‑constrained LLM response format used for tool calls and decisions.
 - **Canonical Tool‑Call Hash:** Deterministic hash of the canonicalized tool call used to bind policy decisions and runner execution.

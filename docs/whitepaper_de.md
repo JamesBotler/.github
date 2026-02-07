@@ -57,7 +57,7 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 **Implikation:** Wenn ein Angreifer das Gateway‑Token stiehlt, erhält er administrative Kontrolle über den Agenten. Er kann Sicherheitsmechanismen ausschalten, die Ausführung vom Container auf den Host umstellen und willkürliche Befehle ausführen. Bestehende LLM‑Sandboxen und Genehmigungssysteme schützen nicht vor dieser Klasse von Angriffen([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Der Vorfall belegt, dass eine einfache Bindung an `localhost` nicht ausreicht, wenn der Browser des Nutzers als Brücke missbraucht werden kann([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)).
 
-**Lösungsansatz:** Unser Framework sieht vor, dass **Geheimnisse niemals in die Modell‑Prompts gelangen** und auch nicht an die UI weitergereicht werden. Tokens und Schlüssel werden ausschließlich vom **Secrets‑Broker** verwaltet. Wenn ein Runner eine API aufrufen muss, erhält er nur einen *opaquen Handle* vom Broker. Dieser Handle ist auf ein einzelnes Werkzeug, konkrete Parameter, einen sehr kurzen Zeitraum und einen bestimmten Runner begrenzt. Selbst wenn ein Angreifer den Handle abfangen würde, könnte er damit keine externen Dienste missbrauchen. Ferner wird die Control UI so gestaltet, dass sie keine direkten Token im Browser speichert; Verbindungen werden durch Pairing und mTLS abgesichert und Anfragen immer serverseitig signiert.
+**Lösungsansatz:** Unser Framework sieht vor, dass **Geheimnisse niemals in die Modell‑Prompts gelangen** und auch nicht an die UI weitergereicht werden. Tokens und Schlüssel werden ausschließlich vom **Secrets‑Broker** verwaltet. Wenn ein Runner eine API aufrufen muss, erhält er nur einen *opaquen Handle* vom Broker. Dieser Handle ist auf ein einzelnes Werkzeug, konkrete Parameter, einen sehr kurzen Zeitraum und einen bestimmten Runner begrenzt. Selbst wenn ein Angreifer den Handle abfangen würde, könnte er damit keine externen Dienste missbrauchen. Ferner wird die Control UI so gestaltet, dass sie keine direkten Token im Browser speichert; Verbindungen werden durch Pairing und mTLS abgesichert und Anfragen immer serverseitig signiert. Pairing ist **kurzlebig, einmalig und gerätegebunden** (Challenge wird mit dem Geräteschlüssel signiert), **Origin/CSRF‑gebunden** und **nutzt keine URL‑Parameter**; die finale Bindung erfordert eine explizite Bestätigung am Gerät.
 
 ### 2.3 Unsichere Skill‑Ökosysteme
 
@@ -491,6 +491,8 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 - **Artifact:** Externer Datensatz für große Ausgaben (Patch, Report, LogBundle).
 - **Job‑Principal:** Principal eines geplanten Jobs mit restriktiven Rechten.
 - **Control UI:** Vertrauenswürdige Oberfläche für Genehmigungen und Pairing.
+- **Pairing‑Token:** Kurzlebiger, einmaliger Code zur Bindung eines Geräts an das Gateway.
+- **Gerätegebundenes Pairing:** Pairing‑Flow mit Besitznachweis des Geräteschlüssels sowie strikten Origin/CSRF‑Checks.
 - **Data Guards:** Filter für Prompt‑Injection, PII und Secrets auf Ein‑/Ausgaben.
 - **Structured Output:** Schema‑gebundene LLM‑Antworten für Tool‑Aufrufe und Entscheidungen.
 - **Kanonischer Tool‑Call‑Hash:** Deterministischer Hash des kanonisierten Tool‑Calls zur Bindung von Policy‑Entscheidung und Runner‑Ausführung.
