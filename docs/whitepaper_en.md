@@ -188,7 +188,7 @@ Contracts are presented to the user in the Control UI as a “permissions card�
 - Type (one‑shot / reusable) and purpose.  
 - Tools, parameter bounds, target allowlists and budgets.  
 - Data handling rules: no attachments, secret redaction, maximum size.  
-- Pins on policy and skill versions.  
+- Pins on policy and skill versions with rollback protection (downgrades require explicit re‑approval).  
 - Optional dry‑run execution.
 
 The user can approve, adjust or deny the contract. When changes occur (e.g. through plugin updates), a diff is displayed and the user must re‑approve.
@@ -497,6 +497,7 @@ This structure aids component separation, enables CI tests for each layer and pr
 - **Canonical Tool‑Call Hash:** Deterministic hash of the canonicalized tool call used to bind policy decisions and runner execution.
 - **Taint Label:** Provenance marker indicating data came from tools, files or external sources and requires stricter egress controls.
 - **Egress Schema:** Allowlisted, typed output structure enforced before data can leave the system.
+- **Rollback‑Protection Pinning:** Policy/skill pinning that enforces a **version floor** and **signed release sequence**, hard‑stops any downgrade, and requires explicit re‑approval with a diff; rollback attempts are logged and can trigger alerts.
 
 ## 20 Outlook and roadmap
 

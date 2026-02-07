@@ -187,7 +187,7 @@ Verträge werden dem Nutzer in der Control UI als „Permissionskarte“ mit fol
 - Art des Vertrags (einmalig / wiederverwendbar) und Zweck.
 - Werkzeuge, Parametergrenzen, Ziel‑Allowlisten und Budgets.  
 - Datenhandhabungsregeln: keine Anhänge, redaktion von Secrets, Höchstgröße.  
-- Pins auf Policy‑ und Skill‑Versionen.  
+- Pins auf Policy‑ und Skill‑Versionen mit Rollback‑Schutz (Downgrades erfordern explizite Neu‑Genehmigung).  
 - Optionale Testausführung („Dry Run“).
 
 Der Nutzer kann den Vertrag genehmigen, anpassen oder ablehnen. Bei Änderungen (z. B. durch Plugin‑Updates) wird ein Diff angezeigt und der Nutzer muss erneut zustimmen.
@@ -498,6 +498,7 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 - **Kanonischer Tool‑Call‑Hash:** Deterministischer Hash des kanonisierten Tool‑Calls zur Bindung von Policy‑Entscheidung und Runner‑Ausführung.
 - **Taint‑Label:** Herkunftsmarker für Daten aus Tools, Dateien oder externen Quellen, die strengere Egress‑Kontrollen erfordern.
 - **Egress‑Schema:** Allowlist‑basiertes, typisiertes Ausgabeschema, das vor dem Verlassen des Systems erzwungen wird.
+- **Rollback‑Protection Pinning:** Policy/Skill‑Pinning mit **Version‑Floor** und **signierter Release‑Sequenz**, das Downgrades hart blockiert und eine explizite Neu‑Genehmigung samt Diff erfordert; Rollback‑Versuche werden protokolliert und können Alarme auslösen.
 
 ## 20 Ausblick und Roadmap
 
