@@ -57,7 +57,7 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 **Implikation:** Wenn ein Angreifer das Gateway‑Token stiehlt, erhält er administrative Kontrolle über den Agenten. Er kann Sicherheitsmechanismen ausschalten, die Ausführung vom Container auf den Host umstellen und willkürliche Befehle ausführen. Bestehende LLM‑Sandboxen und Genehmigungssysteme schützen nicht vor dieser Klasse von Angriffen([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Der Vorfall belegt, dass eine einfache Bindung an `localhost` nicht ausreicht, wenn der Browser des Nutzers als Brücke missbraucht werden kann([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)).
 
-**Lösungsansatz:** Unser Framework sieht vor, dass **Geheimnisse niemals in die Modell‑Prompts gelangen** und auch nicht an die UI weitergereicht werden. Tokens und Schlüssel werden ausschließlich vom **Secrets‑Broker** verwaltet. Wenn ein Runner eine API aufrufen muss, erhält er nur einen *opaquen Handle* vom Broker. Dieser Handle ist auf ein einzelnes Werkzeug, konkrete Parameter, einen sehr kurzen Zeitraum und einen bestimmten Runner begrenzt. Selbst wenn ein Angreifer den Handle abfangen würde, könnte er damit keine externen Dienste missbrauchen. Ferner wird die Control UI so gestaltet, dass sie keine direkten Token im Browser speichert; Verbindungen werden durch Pairing und mTLS abgesichert und Anfragen immer serverseitig signiert. Pairing ist **kurzlebig, einmalig und gerätegebunden** (Challenge wird mit dem Geräteschlüssel signiert), **Origin/CSRF‑gebunden** und **nutzt keine URL‑Parameter**; die finale Bindung erfordert eine explizite Bestätigung am Gerät.
+**Lösungsansatz:** Unser Framework sieht vor, dass **Geheimnisse niemals in die Modell‑Prompts gelangen** und im Browser nicht persistiert werden. Tokens und Schlüssel werden ausschließlich vom **Secrets‑Broker** verwaltet. Wenn ein Runner eine API aufrufen muss, erhält er nur einen *opaquen Handle* vom Broker. Dieser Handle ist auf ein einzelnes Werkzeug, konkrete Parameter, einen sehr kurzen Zeitraum und einen bestimmten Runner begrenzt. Selbst wenn ein Angreifer den Handle abfangen würde, könnte er damit keine externen Dienste missbrauchen. Ferner wird die Control UI so gestaltet, dass sie keine direkten Token im Browser speichert; Verbindungen werden durch Pairing und mTLS abgesichert und Anfragen immer serverseitig signiert. Pairing ist **kurzlebig, einmalig und gerätegebunden** (Challenge wird mit dem Geräteschlüssel signiert), **Origin/CSRF‑gebunden** und **nutzt keine URL‑Parameter**; die finale Bindung erfordert eine explizite Bestätigung am Gerät.
 
 ### 2.3 Unsichere Skill‑Ökosysteme
 
@@ -65,7 +65,7 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 **Implikation:** Das Vertrauen in ein umfangreiches, weitgehend unkontrolliertes Skill‑Ökosystem führt dazu, dass Angreifer bösartige Erweiterungen verbreiten. Installiert der Nutzer eine solche Erweiterung, erhält der Angreifer Zugriff auf die gleichen Berechtigungen wie der Agent: Dateien lesen/schreiben, E‑Mails versenden oder Shell‑Befehle ausführen. Bisherige Mechanismen können den Umfang der Berechtigungen kaum einschränken, da Skills im selben Prozess wie der Agent laufen.
 
-**Lösungsansatz:** In unserer Architektur sind Skills **WASM‑Module**, die streng isoliert ausgeführt werden. Jedes Skill‑Paket enthält eine signierte Manifestdatei mit deklarativen Beschreibungen: ID, Version, Herausgeber, erforderliche Capabilities, Schema der Werkzeuge und erlaubte Netzwerkziele. Bei der Installation wird die Signatur **und die Publisher‑Trust‑Chain** (Root in einer Allowlist oder auditierter Schlüssel) verifiziert und die Eintragung in einem Transparenz‑Log geprüft; gesperrte Publisher werden blockiert. Das Skill muss durch den Nutzer explizit aktiviert werden. Tools innerhalb des Skills haben nur Zugriff auf die vom Policy‑Engine genehmigten Ressourcen. Wenn native Funktionalität nötig ist (z. B. Hardware‑Zugriff), muss ein zweistufiges Plugin genutzt werden: Das WASM‑Modul orchestriert die Logik; eine separate **Native Companion Service** führt die Aktion in einer isolierten Umgebung aus. Dieser Dienst ist über mTLS authentifiziert, und jede Anfrage ist an einen genehmigten Vertrag und eine Entscheidung gebunden.  
+**Lösungsansatz:** In unserer Architektur sind Skills **WASM‑Module**, die streng isoliert ausgeführt werden. Jedes Skill‑Paket enthält eine signierte Manifestdatei mit deklarativen Beschreibungen: ID, Version, Herausgeber, erforderliche Capabilities, Schema der Werkzeuge und erlaubte Netzwerkziele. Bei der Installation wird die Signatur **und die Publisher‑Trust‑Chain** (Root in einer Allowlist oder auditierter Schlüssel) verifiziert und die Eintragung in einem Transparenz‑Log (lokal/privat standardmäßig) geprüft; gesperrte Publisher werden blockiert. Das Skill muss durch den Nutzer explizit aktiviert werden. Tools innerhalb des Skills haben nur Zugriff auf die vom Policy‑Engine genehmigten Ressourcen. Wenn native Funktionalität nötig ist (z. B. Hardware‑Zugriff), muss ein zweistufiges Plugin genutzt werden: Das WASM‑Modul orchestriert die Logik; eine separate **Native Companion Service** führt die Aktion in einer isolierten Umgebung aus. Dieser Dienst ist über mTLS authentifiziert, und jede Anfrage ist an einen genehmigten Vertrag und eine Entscheidung gebunden.  
 
 ### 2.4 Unbeaufsichtigte Automatisierung
 
@@ -103,7 +103,7 @@ Dieses Framework ist so ausgelegt, dass auch nicht‑technische Nutzer sicher ar
 
 - Public UI Exposure: standardmäßig blockiert, Warnungen bei Risk‑Konfiguration.
 - Over‑broad Approvals: Contracts zeigen klare Summary und Risk‑Label.
-- Secrets im Chat: Best‑Effort DLP/Regex‑Erkennung blockiert und warnt bei Secret‑Pattern.
+- Secrets im Chat: Best‑Effort DLP/Regex‑Erkennung blockiert und warnt bei Secret‑Pattern; das ist kein Primärschutz—Secrets nur über die Control UI erfassen.
 - Untrusted Skills: Unsigned Skills lösen Warnungen und zusätzliche Bestätigungen aus.
 - Unsafes Automation: High‑Risk Tools sind für Jobs standardmäßig deaktiviert.
 
@@ -154,7 +154,7 @@ Nicht adressiert werden kompromittierte Hosts oder Hardware‑Angriffe. Wer eine
 
 Die Architektur ist modular aufgebaut (siehe Abbildung 1). Hauptkomponenten:
 
-1. **Gateway:** Zentrale Schnittstelle für alle Eingaben (Messenger, E‑Mail, UI). Es verwaltet Sitzungen, Pairing und zeigt Genehmigungsanfragen an. Das Gateway hat keine Ausführungsberechtigung; es leitet lediglich Nachrichten und Entscheidungsergebnisse weiter.
+1. **Gateway:** Zentrale Schnittstelle für alle Eingaben (Messenger, E‑Mail, UI). Es verwaltet Sitzungen, Pairing und zeigt Genehmigungsanfragen an. Externe Kanäle laufen über kontrollierte Relays; öffentliche Exponierung erfordert explizite Netz‑Policies. Das Gateway hat keine Ausführungsberechtigung; es leitet lediglich Nachrichten und Entscheidungsergebnisse weiter.
 2. **Engine:** Füttert das LLM, extrahiert Absichten, generiert Pläne und schlägt Tool‑Aufrufe vor. Sie hat keine Möglichkeit, selbst Tools auszuführen oder auf Secrets zuzugreifen.
 3. **Policy‑Engine:** Bewertet vorgeschlagene Tool‑Aufrufe anhand von Verträgen, Capabilities und Budgets. Ergebnis ist „Allow“, „Deny“ oder „Genehmigung erforderlich“. Data Guards prüfen In‑ und Out‑Bound‑Daten auf sensible Inhalte.
 4. **Runner:** Ausführungsumgebung für Tools. Jede Capability läuft in einer isolierten Sandbox (WASM oder Container). Runner nutzen den Secrets‑Broker, um API‑Aufrufe mit kurzen Handles durchzuführen.
@@ -274,7 +274,7 @@ Jedes Skill besteht aus einer signierten **WASM‑Modul**‐Datei und einem **Ma
 - Eine Liste der Werkzeuge (`tools`), ihre Namen, Eingabe‑ und Ausgabeschemata und eine Risikoklasse.  
 - Erforderliche Capabilities (`required_capabilities`) und erlaubte Egress‑Ziele (`egress_requirements`).  
 
-Die Skill‑Registry verifiziert beim Import die Signatur **und die Publisher‑Trust‑Chain** und prüft die Eintragung im Transparenz‑Log. Wird ein Skill installiert, muss der Nutzer ihn in der Control UI pro Agent / Workspace aktivieren. Werkzeuge dürfen nur die im Manifest deklarierten Capabilities nutzen; andere Aufrufe werden von der Policy verweigert.
+Die Skill‑Registry verifiziert beim Import die Signatur **und die Publisher‑Trust‑Chain** und prüft die Eintragung im Transparenz‑Log (lokal/privat standardmäßig). Wird ein Skill installiert, muss der Nutzer ihn in der Control UI pro Agent / Workspace aktivieren. Werkzeuge dürfen nur die im Manifest deklarierten Capabilities nutzen; andere Aufrufe werden von der Policy verweigert.
 
 Benötigt ein Skill API‑Keys oder Tokens, werden Secrets über den in **Abschnitt 8.1** beschriebenen Control UI‑Flow bereitgestellt und gelangen niemals in den LLM‑Kontext.
 

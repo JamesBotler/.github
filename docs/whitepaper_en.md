@@ -58,7 +58,7 @@ This white paper summarises our chat discussions and introduces a new framework 
 
 **Implication:** Stealing the gateway token grants administrative control over the agent. The attacker can turn off safety mechanisms, run commands on the host instead of the container and perform arbitrary actions. Existing sandbox and approval systems do not protect against this class of attack([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)). Binding to `localhost` alone is insufficient because the user’s browser can be abused as a bridge([The Hacker News](https://thehackernews.com/2026/02/openclaw-bug-enables-one-click-remote.html)).
 
-**Solution:** In our framework, **secrets never enter the model prompts** nor the UI. Tokens and keys remain exclusively in the **secrets broker**. When a runner must call an API, it receives only an *opaque handle* from the broker. This handle is bound to a single tool, specific parameters, a short timeframe and a specific runner. Even if an attacker intercepted the handle, they could not misuse it to call external services. The Control UI stores no tokens in the browser; connections are secured via pairing and mTLS, and requests are always server‑side signed. Pairing is **short‑lived, single‑use and device‑bound** (challenge signed by the device key), **origin/CSRF‑bound**, and **never uses URL parameters**; final binding requires explicit user confirmation on the device.
+**Solution:** In our framework, **secrets never enter the model prompts** and are never persisted in the browser. Tokens and keys remain exclusively in the **secrets broker**. When a runner must call an API, it receives only an *opaque handle* from the broker. This handle is bound to a single tool, specific parameters, a short timeframe and a specific runner. Even if an attacker intercepted the handle, they could not misuse it to call external services. The Control UI stores no tokens in the browser; connections are secured via pairing and mTLS, and requests are always server‑side signed. Pairing is **short‑lived, single‑use and device‑bound** (challenge signed by the device key), **origin/CSRF‑bound**, and **never uses URL parameters**; final binding requires explicit user confirmation on the device.
 
 ### 2.3 Insecure skill ecosystems
 
@@ -66,7 +66,7 @@ This white paper summarises our chat discussions and introduces a new framework 
 
 **Implication:** Trusting an unregulated skills ecosystem means attackers can spread malicious extensions. If a user installs such a skill, the attacker inherits the agent’s privileges: reading/writing files, sending emails, running shell commands. Existing mechanisms can barely limit these permissions because skills run in the same process as the agent.
 
-**Solution:** In our architecture, skills are **WASM modules** executed in isolation. Each skill package contains a signed manifest declaring its ID, version, publisher, required capabilities, tool schemas and allowed network targets. Installation verifies the signature **and the publisher trust chain** (rooted in an allowlisted or audited key), and checks inclusion in a transparency log; revoked publishers are blocked. The user must explicitly enable the skill per agent or workspace. Tools within a skill can only access resources approved by the policy engine. When native functionality is required (e.g., hardware access), developers must adopt a two‑stage approach: the WASM module orchestrates logic, and a separate **native companion service** performs the action in an isolated environment. This service is authenticated via mTLS, and each request is bound to an approved contract and policy decision.
+**Solution:** In our architecture, skills are **WASM modules** executed in isolation. Each skill package contains a signed manifest declaring its ID, version, publisher, required capabilities, tool schemas and allowed network targets. Installation verifies the signature **and the publisher trust chain** (rooted in an allowlisted or audited key), and checks inclusion in a transparency log (local/private by default); revoked publishers are blocked. The user must explicitly enable the skill per agent or workspace. Tools within a skill can only access resources approved by the policy engine. When native functionality is required (e.g., hardware access), developers must adopt a two‑stage approach: the WASM module orchestrates logic, and a separate **native companion service** performs the action in an isolated environment. This service is authenticated via mTLS, and each request is bound to an approved contract and policy decision.
 
 ### 2.4 Unsupervised automation
 
@@ -104,7 +104,7 @@ The framework is designed so non‑technical users can operate safely through st
 
 - Public UI exposure: blocked by default, warnings on risky config.
 - Over‑broad approvals: contracts show plain‑language summaries and risk labels.
-- Secrets in chat: best‑effort DLP/regex detection blocks and warns on secret‑like strings.
+- Secrets in chat: best‑effort DLP/regex detection blocks and warns on secret‑like strings; this is not a primary control—use the Control UI for secret entry.
 - Untrusted skills: unsigned skills trigger warnings and extra confirmation.
 - Unsafe automation: high‑risk tools disabled for jobs unless explicitly approved.
 
@@ -155,7 +155,7 @@ Out of scope are compromised hosts or hardware attacks. A root‑compromised OS 
 
 The architecture is modular (see the diagram below). Key components:
 
-1. **Gateway:** The central interface for all inputs (messengers, email, UI). It manages sessions, pairing and displays approval requests. The gateway has no execution rights; it only forwards messages and decision results.
+1. **Gateway:** The central interface for all inputs (messengers, email, UI). It manages sessions, pairing and displays approval requests. External channels connect via controlled relays; public exposure requires explicit network policy. The gateway has no execution rights; it only forwards messages and decision results.
 2. **Engine:** Feeds the LLM, extracts intent, generates plans and proposes tool calls. It cannot execute tools or access secrets.
 3. **Policy Engine:** Evaluates proposed tool calls based on contracts, capabilities and budgets. Its output is “allow,” “deny” or “approval required.” Data guards inspect inbound and outbound data for sensitive content.
 4. **Runner:** The execution environment for tools. Each capability runs in an isolated sandbox (WASM or container). Runners use the secrets broker to call APIs with short‑lived handles.
@@ -275,7 +275,7 @@ Each skill consists of a signed **WASM module** and a **manifest**. The manifest
 - A list of tools (`tools`), their names, input and output schemas and a risk class.  
 - Required capabilities (`required_capabilities`) and allowed network targets (`egress_requirements`).  
 
-The skill registry verifies the signature and **publisher trust chain** at import, and checks transparency log inclusion. When a skill is installed, the user must enable it in the Control UI per agent or workspace. Tools may only use the capabilities declared in the manifest; other calls are denied by policy.
+The skill registry verifies the signature and **publisher trust chain** at import, and checks transparency log inclusion (local/private by default). When a skill is installed, the user must enable it in the Control UI per agent or workspace. Tools may only use the capabilities declared in the manifest; other calls are denied by policy.
 
 If a skill requires API keys or tokens, secrets are provisioned through the Control UI flow described in **Section 8.1**, ensuring they never enter the LLM context.
 
