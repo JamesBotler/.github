@@ -82,7 +82,7 @@ This white paper summarises our chat discussions and introduces a new framework 
 
 **Implication:** Unlimited outputs can lead to high costs (token usage), unreadable chats and data leakage. In existing agent designs, code diffs, logs or documents are often pushed into the conversation without trimming.
 
-**Solution:** Our framework introduces **artifacts** as the primary form of large outputs. Tools that generate large datasets (e.g., code patches, reports, databases) store these as files in an artifact store. The engine returns only a summary, a preview and a reference to the artifact. Artifacts are encrypted at rest, access is scoped per principal, and retention/TTL is enforced. Contracts set limits on artifact size, number of changed files, allowed file types and retention. For code tasks we recommend workflow steps: plan which files to modify, generate the patch, test it, have a review performed and finally apply it – the latter requiring a new approval. This keeps the conversation concise and ensures controlled processing.
+**Solution:** Our framework introduces **artifacts** as the primary form of large outputs. Tools that generate large datasets (e.g., code patches, reports, databases) store these as files in an artifact store. The engine returns only a summary, a preview and a reference to the artifact. Artifacts are encrypted at rest, access is scoped per principal, and retention/TTL is enforced. Artifacts are **untrusted by default**: each artifact has provenance and a content hash, is scanned on write and read, and re‑ingestion requires an explicit allowlist or approval. Contracts set limits on artifact size, number of changed files, allowed file types and retention. For code tasks we recommend workflow steps: plan which files to modify, generate the patch, test it, have a review performed and finally apply it – the latter requiring a new approval. This keeps the conversation concise and ensures controlled processing.
 
 
 ## 3 Design goals and requirements
@@ -351,7 +351,7 @@ Agents can exchange data via structured artifacts and results, but internal chat
 
 ## 13 Artifact‑based outputs
 
-Instead of sending large data directly into the chat, the framework uses **artifacts**. An artifact is a structured dataset with metadata (type, size, hash, storage location, access policy). Examples:
+Instead of sending large data directly into the chat, the framework uses **artifacts**. An artifact is a structured dataset with metadata (type, size, hash, storage location, access policy). Artifacts are **untrusted by default**: they carry provenance, are stored by hash, are scanned on write and read, and require explicit allowlists or approval to re‑ingest into model context or external outputs. Examples:
 
 - **Patch:** Code diff (e.g. Unified diff format).  
 - **Report:** Markup file (e.g. Markdown or PDF) with detailed content.  
@@ -492,6 +492,7 @@ This structure aids component separation, enables CI tests for each layer and pr
 - **Secrets Broker:** Stores long‑lived secrets and issues short‑lived handles.
 - **Skill:** Signed tool package (WASM or MCP server) with a manifest.
 - **Artifact:** Externalized output for large data (patches, reports, log bundles).
+- **Untrusted Artefact:** Artifact treated as untrusted by default; stored by hash with provenance, scanned on write/read, and re‑ingested only with explicit allowlist or approval.
 - **Job Principal:** Principal for scheduled jobs with tight rights and budgets.
 - **Control UI:** Trusted approval and pairing surface.
 - **Pairing Token:** Short‑lived, single‑use code used to bind a device to the gateway.

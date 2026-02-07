@@ -81,7 +81,7 @@ Dieses Whitepaper fasst die Diskussionen aus unserem Chat zusammen und beschreib
 
 **Implikation:** Unbegrenzte Ausgaben können zu hohen Kosten (Tokenverbrauch), unlesbaren Chats und Datenlecks führen. In bestehendem Agenten‑Design werden Code‑Diffs, Logs oder Dokumente oft ungekürzt in den Gesprächsfluss gepusht.  
 
-**Lösungsansatz:** Unser Framework führt **Artifacts** als primäre Form grosser Ausgaben ein. Werkzeuge, die große Datenmengen erzeugen (z. B. Code‑Patches, Reports, Datenbanken), speichern diese als Datei in einem Artifact‑Store. Die Engine liefert nur eine Zusammenfassung, eine Vorschau (Auszug) und einen Verweis auf das Artifact zurück. Artifacts sind at rest verschlüsselt, Zugriff ist pro Principal gescoped und Retention/TTL wird erzwungen. Verträge legen Grenzwerte für Artifact‑Größe, Anzahl geänderter Dateien, erlaubte Dateitypen und Speicherdauer fest. Für Code‑Aufgaben empfehlen wir Workflow‑Schritte: erst planen (Welche Dateien werden verändert?), dann Patch generieren, testen, überprüfen lassen und schlussendlich anwenden – letzteres unter neuer Genehmigung. So bleibt die Konversation schlank und die Verarbeitung kontrollierbar.
+**Lösungsansatz:** Unser Framework führt **Artifacts** als primäre Form grosser Ausgaben ein. Werkzeuge, die große Datenmengen erzeugen (z. B. Code‑Patches, Reports, Datenbanken), speichern diese als Datei in einem Artifact‑Store. Die Engine liefert nur eine Zusammenfassung, eine Vorschau (Auszug) und einen Verweis auf das Artifact zurück. Artifacts sind at rest verschlüsselt, Zugriff ist pro Principal gescoped und Retention/TTL wird erzwungen. Artifacts sind **standardmäßig untrusted**: jedes Artifact trägt Provenienz und einen Content‑Hash, wird beim Schreiben und Lesen gescannt und darf nur mit expliziter Allowlist oder Genehmigung re‑ingestiert werden. Verträge legen Grenzwerte für Artifact‑Größe, Anzahl geänderter Dateien, erlaubte Dateitypen und Speicherdauer fest. Für Code‑Aufgaben empfehlen wir Workflow‑Schritte: erst planen (Welche Dateien werden verändert?), dann Patch generieren, testen, überprüfen lassen und schlussendlich anwenden – letzteres unter neuer Genehmigung. So bleibt die Konversation schlank und die Verarbeitung kontrollierbar.
 
 
 ## 3 Designziele und Anforderungen
@@ -350,7 +350,7 @@ Agenten können strukturiert miteinander kommunizieren (Artifacts, strukturierte
 
 ## 13 Artifact‑basierte Ausgaben
 
-Anstatt große Datenmengen direkt im Chat zu senden, legt das Framework **Artifacts** an. Ein Artifact ist ein strukturierter Datensatz mit Metadaten (Typ, Größe, Hash, Speicherort, Zugriffsrichtlinie).  
+Anstatt große Datenmengen direkt im Chat zu senden, legt das Framework **Artifacts** an. Ein Artifact ist ein strukturierter Datensatz mit Metadaten (Typ, Größe, Hash, Speicherort, Zugriffsrichtlinie). Artifacts sind **standardmäßig untrusted**: sie tragen Provenienz, werden per Hash gespeichert, beim Schreiben und Lesen gescannt und dürfen nur mit expliziter Allowlist oder Genehmigung erneut in den Modell‑Kontext oder nach außen eingespeist werden.  
 
 Beispiele für Artifact‑Typen:
 
@@ -493,6 +493,7 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 - **Secrets‑Broker:** Verwaltet langfristige Geheimnisse und gibt kurzlebige Handles aus.
 - **Skill:** Signiertes Tool‑Paket (WASM oder MCP‑Server) mit Manifest.
 - **Artifact:** Externer Datensatz für große Ausgaben (Patch, Report, LogBundle).
+- **Untrusted Artefact:** Artifact, das standardmäßig als untrusted gilt; per Hash mit Provenienz gespeichert, beim Schreiben/Lesen gescannt und nur mit expliziter Allowlist oder Genehmigung erneut ingestiert.
 - **Job‑Principal:** Principal eines geplanten Jobs mit restriktiven Rechten.
 - **Control UI:** Vertrauenswürdige Oberfläche für Genehmigungen und Pairing.
 - **Pairing‑Token:** Kurzlebiger, einmaliger Code zur Bindung eines Geräts an das Gateway.
