@@ -256,10 +256,13 @@ Unlike token passing (as in OpenClaw), this ensures that even if an attacker cap
 Runners are the “workbench” of the framework. Each tool class has a dedicated runner (e.g. email runner, filesystem runner, Slack runner). The runner executes a tool in an isolated environment and must:
 
 - **Sandbox:** Use a **WASM runtime** by default. The runner process itself runs in a separate container with minimal rights.  
+- **Runner hardening baseline:** `no-new-privileges`, drop all Linux capabilities, strict `seccomp` allowlist, rootless execution, read‑only root filesystem with explicit writable mounts only, and no host sockets.  
 - **Egress filter:** May connect only to hosts/ports allowed by policy. All other network connections are forbidden.  
 - **Resource limits:** Enforce CPU time, memory and file sizes.  
 - **Filesystem mounts:** Write access only to defined paths; read rights can be pattern‑restricted.  
 - **Output sanitizer:** Before returning results to the engine, remove or mask tokens, auth headers, API keys, PII and other defined patterns. Large outputs become artifacts.
+
+Network is **off by default** for runners; enabling egress requires explicit policy allowlists. Each runner records its hardening profile hash/version in the audit log and fails closed if required controls are missing.
 
 
 ## 10 Skills and plugin model
@@ -485,6 +488,7 @@ This structure aids component separation, enables CI tests for each layer and pr
 - **Capability:** Fine‑grained permission for a tool class with parameter bounds.
 - **Policy Engine:** Evaluates tool calls against contracts, budgets and risk tiers.
 - **Runner:** Isolated execution environment for tools (WASM or containers).
+- **Runner Hardening Baseline:** Mandatory security profile for runners (seccomp allowlist, no‑new‑privileges, read‑only FS, rootless, no‑network by default).
 - **Secrets Broker:** Stores long‑lived secrets and issues short‑lived handles.
 - **Skill:** Signed tool package (WASM or MCP server) with a manifest.
 - **Artifact:** Externalized output for large data (patches, reports, log bundles).

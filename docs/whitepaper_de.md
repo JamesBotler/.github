@@ -255,10 +255,13 @@ Im Gegensatz zu Token‑Weitergabe (wie bei OpenClaw) wird so sichergestellt, da
 Runner sind die „Werkbank“ des Frameworks. Für jede Werkzeugklasse existiert ein spezieller Runner (z. B. E‑Mail‑Runner, Filesystem‑Runner, Slack‑Runner). Der Runner führt ein Werkzeug in einer isolierten Umgebung aus und hat folgende Pflichten:
 
 - **Sandboxing:** Standardmäßig wird ein **WASM‑Runtime** genutzt. Der Runner selbst läuft in einem separaten Container mit minimalen Rechten.  
+- **Runner‑Hardening‑Baseline:** `no-new-privileges`, alle Linux‑Capabilities droppen, strikte `seccomp`‑Allowlist, rootless Ausführung, read‑only Root‑Filesystem mit expliziten Schreib‑Mounts sowie keine Host‑Sockets.  
 - **Egress‑Filter:** Der Runner darf nur zu in der Policy erlaubten Hosts/Ports verbinden. Alle anderen Netzverbindungen sind verboten.  
 - **Ressourcenlimits:** CPU‑Zeit, Speicher und Dateigrößen sind begrenzt.  
 - **Filesystem‑Mounts:** Schreibzugriff nur auf definierte Pfade; Leserechte können per Pattern eingeschränkt werden.  
 - **Output‑Sanitizer:** Vor der Rückgabe an die Engine werden Tokens, Auth‑Header, API‑Schlüssel, PII und andere definierte Patterns entfernt oder maskiert. Große Ausgaben werden als Artifacts abgelegt.  
+
+Netzwerk ist **standardmäßig aus**; Egress erfordert explizite Policy‑Allowlists. Jeder Runner protokolliert den Hardening‑Profil‑Hash/die Version im Audit‑Log und schlägt fehl, wenn erforderliche Controls fehlen.
 
 
 ## 10 Skills und Plugin‑Modell
@@ -486,6 +489,7 @@ Diese Struktur erleichtert die Trennung von Komponenten, ermöglicht CI‑Tests 
 - **Capability:** Feingranularer Zugriff auf eine Tool‑Klasse mit Parametergrenzen.
 - **Policy‑Engine:** Bewertet Tool‑Aufrufe gegen Verträge, Budgets und Risikoklassen.
 - **Runner:** Isolierte Ausführungsumgebung für Tools (WASM/Container).
+- **Runner‑Hardening‑Baseline:** Verbindliches Sicherheitsprofil für Runner (seccomp‑Allowlist, no‑new‑privileges, read‑only FS, rootless, Netzwerk standardmäßig aus).
 - **Secrets‑Broker:** Verwaltet langfristige Geheimnisse und gibt kurzlebige Handles aus.
 - **Skill:** Signiertes Tool‑Paket (WASM oder MCP‑Server) mit Manifest.
 - **Artifact:** Externer Datensatz für große Ausgaben (Patch, Report, LogBundle).
